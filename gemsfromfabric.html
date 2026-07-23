@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GemsFromFabric — Hand-Picked Vintage</title>
+
+<!-- Fonts: Fraunces (display) + Space Mono (tags/prices) + Inter (body) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+  /* ============================================================
+     DESIGN TOKENS — dark, cozy, wooden vintage-shop palette.
+     Change these to re-theme the whole site at once.
+     ============================================================ */
+  :root {
+    --wood-dark:   #2b1b11; /* page background — deep walnut, as requested */
+    --wood:        #3c2717; /* card / panel background */
+    --wood-light:  #5a3c24; /* borders, hairlines */
+    --amber:       #e0a458; /* primary accent — buttons, links, glow */
+    --amber-glow:  #f6c98a; /* lighter amber for highlights/particles */
+    --cream:       #f0e4cd; /* primary text on dark backgrounds */
+    --cream-soft:  #c7b696; /* secondary / muted text */
+    --brass:       #b98a4e; /* tag borders, fixtures */
+    --rust:        #b1502f; /* remove / accent-warm */
+    --radius:      3px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at 50% -10%, #3a2515 0%, var(--wood-dark) 60%);
+    color: var(--cream);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .display { font-family: 'Fraunces', serif; font-weight: 600; margin: 0; }
+  .mono { font-family: 'Space Mono', monospace; }
+  a { color: var(--amber); }
+  img { max-width: 100%; display: block; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+  /* ============================================================
+     HEADER
+     ============================================================ */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 5vw;
+    background: rgba(43, 27, 17, 0.85);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--wood-light);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  }
+
+  /* Logo: swap the <img id="logoImg"> src below for your own file.
+     If it fails to load, a text fallback quietly takes its place. */
+  .logo-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    cursor: default;
+  }
+  .logo-wrap img { height: 42px; width: auto; display: block; }
+  .logo-fallback {
+    display: none;
+    align-items: center;
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    color: var(--cream);
+  }
+  .logo-fallback em { font-style: italic; color: var(--amber); margin: 0 2px; }
+  /* Sweeping "shine" overlay, animated by GSAP on hover — see script below */
+  .logo-shine {
+    position: absolute;
+    top: 0; left: 0;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(115deg, transparent, rgba(246, 201, 138, 0.55), transparent);
+    transform: translateX(-150%);
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+
+  .nav-links { display: flex; align-items: center; gap: 26px; }
+  .nav-links a { text-decoration: none; color: var(--cream-soft); font-size: 0.95rem; font-weight: 500; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--amber); }
+
+  .cart-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 1px solid var(--brass);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    font-family: 'Space Mono', monospace;
+    color: var(--cream);
+    transition: background 0.2s, color 0.2s;
+  }
+  .cart-btn:hover { background: var(--amber); color: var(--wood-dark); }
+  .cart-count {
+    background: var(--rust);
+    color: var(--cream);
+    border-radius: 50%;
+    width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+  }
+
+  /* ============================================================
+     HERO — Three.js canvas sits behind the text as an immersive,
+     mouse-reactive background of drifting dust and fabric planes.
+     ============================================================ */
+  .hero-scene-wrap {
+    position: relative;
+    min-height: 92vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+  .hero-glow {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: radial-gradient(circle at 60% 35%, rgba(224,164,88,0.18), transparent 60%);
+    pointer-events: none;
+  }
+  #heroCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    opacity: 0; /* faded in by GSAP once the scene is ready */
+  }
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    padding: 0 5vw;
+    max-width: 900px;
+  }
+  .hero-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--cream-soft);
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 18px;
+  }
+  .hero-eyebrow::before { content: ''; width: 34px; height: 1px; background: var(--brass); }
+  .hero-heading {
+    font-size: clamp(2.6rem, 7vw, 5.2rem);
+    line-height: 1.03;
+    letter-spacing: -0.01em;
+    text-shadow: 0 4px 30px rgba(0,0,0,0.5);
+  }
+  .hero-heading em { color: var(--amber); font-style: italic; }
+  .hero-sub { margin-top: 22px; max-width: 460px; color: var(--cream-soft); font-size: 1.05rem; }
+  .hero-cta {
+    margin-top: 34px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 26px;
+    background: var(--amber);
+    color: var(--wood-dark);
+    text-decoration: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(224,164,88,0.25);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(224,164,88,0.35); }
+
+  .section-divider {
+    margin: 0 5vw;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--wood-light) 15%, var(--brass) 50%, var(--wood-light) 85%, transparent);
+    opacity: 0.6;
+  }
+
+  /* ============================================================
+     SHOP
+     ============================================================ */
+  .shop { padding: 8vh 5vw 10vh; }
+  .shop-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; margin-bottom: 32px; }
+  .shop-heading h2 { font-size: 2rem; }
+  .shop-heading .count { font-family: 'Space Mono', monospace; font-size: 0.85rem; color: var(--cream-soft); }
+
+  .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 40px; }
+  .filter-pill {
+    padding: 8px 18px;
+    border: 1px dashed var(--brass);
+    border-radius: 999px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--cream-soft);
+    transition: all 0.15s ease;
+  }
+  .filter-pill:hover { border-color: var(--amber); color: var(--amber); }
+  .filter-pill.active { background: var(--amber); border-color: var(--amber); color: var(--wood-dark); }
+
+  .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 34px 24px; }
+
+  .product-card {
+    position: relative;
+    background: var(--wood);
+    border: 1px solid var(--wood-light);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .product-card:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(0,0,0,0.45), 0 0 0 1px var(--brass); }
+
+  .product-photo { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; background: var(--wood-dark); }
+
+  /* A little hand-written-style price tag, dangling in the corner
+     of each photo like a real vintage garment tag. */
+  .price-tag {
+    position: absolute;
+    top: 14px; right: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px 5px 16px;
+    background: var(--cream);
+    color: var(--wood-dark);
+    border: 1px solid var(--brass);
+    border-radius: 2px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    transform: rotate(6deg);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+    z-index: 2;
+  }
+  .price-tag::before {
+    content: '';
+    position: absolute;
+    left: 5px; top: 50%;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    border: 1.5px solid var(--brass);
+    background: var(--wood-dark);
+    transform: translateY(-50%);
+  }
+
+  .product-info { padding: 18px 16px 20px; }
+  .product-brand { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cream-soft); margin-bottom: 4px; }
+  .product-name { font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 500; margin-bottom: 10px; color: var(--cream); }
+  .product-meta { display: flex; justify-content: flex-start; font-family: 'Space Mono', monospace; font-size: 0.8rem; margin-bottom: 14px; }
+  .product-size { color: var(--cream-soft); border: 1px solid var(--wood-light); padding: 2px 8px; border-radius: var(--radius); }
+
+  .add-btn {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--amber);
+    border-radius: var(--radius);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--amber);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .add-btn:hover { background: var(--amber); color: var(--wood-dark); }
+  .add-btn.added { background: var(--rust); border-color: var(--rust); color: var(--cream); }
+
+  .empty-state { grid-column: 1 / -1; text-align: center; padding: 60px 0; color: var(--cream-soft); font-family: 'Space Mono', monospace; }
+
+  /* ============================================================
+     FOOTER
+     ============================================================ */
+  footer { padding: 8vh 5vw 6vh; display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 40px; }
+  footer h3 { font-family: 'Space Mono', monospace; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cream-soft); margin-bottom: 14px; }
+  footer p, footer a { color: var(--cream); text-decoration: none; font-size: 0.95rem; }
+  footer .brand-blurb { max-width: 320px; color: var(--cream-soft); }
+  footer ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+  .whatsapp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+    padding: 10px 18px;
+    background: linear-gradient(135deg, var(--amber), var(--brass));
+    color: var(--wood-dark) !important;
+    border-radius: var(--radius);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 700;
+    transition: transform 0.2s;
+  }
+  .whatsapp-btn:hover { transform: translateY(-2px); }
+
+  .footer-bottom {
+    grid-column: 1 / -1;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--wood-light);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--cream-soft);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  }
+
+  /* ============================================================
+     CART DRAWER + OVERLAY
+     Position/x is now controlled by GSAP (see script), not CSS
+     transitions — this base transform just prevents a flash of
+     the open drawer before the script runs.
+     ============================================================ */
+  .cart-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10, 6, 3, 0.6);
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 40;
+  }
+  .cart-overlay.open { opacity: 1; visibility: visible; }
+
+  .cart-drawer {
+    position: fixed; top: 0; right: 0;
+    height: 100%;
+    width: min(420px, 92vw);
+    background: var(--wood);
+    border-left: 1px solid var(--wood-light);
+    box-shadow: -10px 0 40px rgba(0,0,0,0.4);
+    transform: translateX(100%);
+    z-index: 50;
+    display: flex; flex-direction: column;
+  }
+
+  .cart-header { display: flex; justify-content: space-between; align-items: center; padding: 22px 22px 16px; border-bottom: 1px solid var(--wood-light); }
+  .cart-header h2 { font-size: 1.4rem; }
+  .cart-close { font-size: 1.4rem; line-height: 1; color: var(--cream-soft); }
+  .cart-close:hover { color: var(--rust); }
+
+  .cart-items { flex: 1; overflow-y: auto; padding: 10px 22px; }
+  .cart-item { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px dashed var(--wood-light); }
+  .cart-item img { width: 60px; height: 74px; object-fit: cover; border-radius: var(--radius); flex-shrink: 0; }
+  .cart-item-info { flex: 1; min-width: 0; }
+  .cart-item-name { font-size: 0.95rem; font-weight: 600; }
+  .cart-item-meta { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--cream-soft); margin: 3px 0 8px; }
+  .cart-item-row { display: flex; align-items: center; justify-content: space-between; }
+  .qty-control { display: flex; align-items: center; gap: 8px; font-family: 'Space Mono', monospace; font-size: 0.85rem; }
+  .qty-control button { width: 22px; height: 22px; border: 1px solid var(--wood-light); border-radius: var(--radius); color: var(--cream); }
+  .qty-control button:hover { background: var(--amber); color: var(--wood-dark); }
+  .cart-item-price { font-family: 'Space Mono', monospace; color: var(--amber); font-weight: 700; }
+  .remove-btn { font-family: 'Space Mono', monospace; font-size: 0.7rem; text-transform: uppercase; color: var(--rust); margin-top: 8px; text-decoration: underline; }
+
+  .cart-empty { padding: 60px 10px; text-align: center; color: var(--cream-soft); font-family: 'Space Mono', monospace; font-size: 0.9rem; }
+
+  .cart-footer { padding: 18px 22px 26px; border-top: 1px solid var(--wood-light); }
+  .cart-total-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; font-family: 'Space Mono', monospace; }
+  .cart-total-row .label { font-size: 0.85rem; color: var(--cream-soft); }
+  .cart-total-row .value { font-size: 1.3rem; font-weight: 700; color: var(--amber); }
+
+  .contact-field {
+    width: 100%; padding: 10px 12px; margin-bottom: 14px;
+    border: 1px solid var(--wood-light); border-radius: var(--radius);
+    background: var(--wood-dark); color: var(--cream);
+    font-family: 'Inter', sans-serif; font-size: 0.9rem;
+  }
+  .contact-field::placeholder { color: var(--cream-soft); }
+  .contact-field:focus { outline: 2px solid var(--amber); }
+
+  .place-order-btn {
+    width: 100%; padding: 14px;
+    background: var(--amber); color: var(--wood-dark);
+    border-radius: var(--radius);
+    font-family: 'Space Mono', monospace; font-size: 0.85rem;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .place-order-btn:hover { background: var(--amber-glow); }
+  .place-order-btn:disabled { background: var(--wood-light); color: var(--cream-soft); cursor: not-allowed; }
+
+  .order-note { margin-top: 10px; font-size: 0.72rem; color: var(--cream-soft); text-align: center; }
+
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+  @media (max-width: 720px) {
+    .nav-links { gap: 14px; }
+    .nav-links .nav-label { display: none; }
+    footer { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
+  <header class="site-header">
+    <div class="logo-wrap" id="logoWrap">
+      <!-- LOGO: replace the src below with your own logo file/path.
+           If it fails to load, the text fallback next to it appears instead. -->
+      <img id="logoImg" src="INSERT_LOGO_HERE.png" alt="GemsFromFabric logo"
+           onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='flex';">
+      <div class="logo-fallback" id="logoFallback">Gems<em>From</em>Fabric</div>
+      <span class="logo-shine" id="logoShine"></span>
+    </div>
+    <nav class="nav-links">
+      <a href="#shop" class="nav-label">Shop</a>
+      <a href="#contact" class="nav-label">Contact</a>
+      <button class="cart-btn" onclick="openCart()">
+        <span class="mono">Cart</span>
+        <span class="cart-count" id="cartCount">0</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- ============================================================
+       HERO — Three.js scene lives on #heroCanvas, behind the text
+       ============================================================ -->
+  <section class="hero-scene-wrap">
+    <div class="hero-glow"></div>
+    <canvas id="heroCanvas"></canvas>
+    <div class="hero-content">
+      <div class="hero-eyebrow">Est. on Instagram · Now open online</div>
+      <h1 class="hero-heading">Hand-picked vintage,<br><em>found by lamplight.</em></h1>
+      <p class="hero-sub">Every piece is sourced, inspected, and worn-tested by hand — like flipping through a friend's closet, if that closet were lit by a single warm bulb.</p>
+      <a href="#shop" class="hero-cta">Step inside ↓</a>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================================================
+       SHOP
+       ============================================================ -->
+  <section class="shop" id="shop">
+    <div class="shop-heading">
+      <h2>The Rack</h2>
+      <span class="count mono" id="itemCount">8 pieces available</span>
+    </div>
+
+    <div class="filter-bar" id="filterBar">
+      <button class="filter-pill active" data-category="all">All</button>
+      <button class="filter-pill" data-category="jackets">Jackets</button>
+      <button class="filter-pill" data-category="shirts">Shirts</button>
+      <button class="filter-pill" data-category="pants">Pants</button>
+      <button class="filter-pill" data-category="accessories">Accessories</button>
+    </div>
+
+    <div class="product-grid" id="productGrid">
+      <!-- Product cards rendered by JS — see PRODUCTS array in the script. -->
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer id="contact">
+    <div>
+      <h3>GemsFromFabric</h3>
+      <p class="brand-blurb">A one-person vintage shop, formerly an Instagram closet, now (also) a website. Slow fashion, fast shipping.</p>
+    </div>
+    <div>
+      <h3>Get in touch</h3>
+      <ul>
+        <li><a href="mailto:Gemsfromfabric@gmail.com">Gemsfromfabric@gmail.com</a></li>
+        <li>
+          <!-- WhatsApp click-to-chat. Number is +961 81 056 617, written
+               for wa.me without the "+", spaces, or leading 0. -->
+          <a class="whatsapp-btn" href="https://wa.me/96181056617" target="_blank" rel="noopener">
+            💬 Chat on WhatsApp
+          </a>
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h3>Follow along</h3>
+      <ul>
+        <!-- Swap this href for your real Instagram profile link -->
+        <li><a href="https://instagram.com/gemsfromfabric" target="_blank" rel="noopener">@gemsfromfabric on Instagram</a></li>
+      </ul>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 GemsFromFabric. Every piece is one of one.</span>
+      <span>Shipping worldwide, packed with care.</span>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       CART DRAWER + OVERLAY
+       ============================================================ -->
+  <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
+  <aside class="cart-drawer" id="cartDrawer">
+    <div class="cart-header">
+      <h2>Your Order</h2>
+      <button class="cart-close" onclick="closeCart()">&times;</button>
+    </div>
+    <div class="cart-items" id="cartItems"></div>
+    <div class="cart-footer">
+      <div class="cart-total-row">
+        <span class="label">Total</span>
+        <span class="value mono" id="cartTotal">$0</span>
+      </div>
+      <input type="text" class="contact-field" id="buyerName" placeholder="Your name or Instagram handle (optional)">
+      <input type="text" class="contact-field" id="buyerNote" placeholder="Shipping address or note (optional)">
+      <button class="place-order-btn" id="placeOrderBtn" onclick="placeOrder()" disabled>Place Order</button>
+      <p class="order-note">This opens an email to Gemsfromfabric@gmail.com with your order pre-filled — nothing is charged automatically.</p>
+    </div>
+  </aside>
+
+  <!-- ============================================================
+       LIBRARIES (CDN) — Three.js for the hero scene, GSAP + its
+       ScrollTrigger plugin for all page animation.
+       ============================================================ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<script>
+  /* ============================================================
+     SHOP CONFIG
+     ============================================================ */
+  const SHOP_EMAIL = "Gemsfromfabric@gmail.com";
+  const SHOP_NAME  = "GemsFromFabric";
+
+  /* ============================================================
+     PRODUCT DATA — this is your inventory. Edit this array to
+     add, remove, or change pieces; the grid rebuilds automatically.
+
+     Fields: id (unique), brand, name, category (jackets/shirts/
+     pants/accessories), size, price (plain number), image (URL).
+
+     IMAGE PLACEHOLDERS: every "image" below points to a
+     placehold.co placeholder. Replace each URL with your own
+     photo — a hosted link (Imgur, a public Google Drive link) or
+     a local path like "images/jacket-01.jpg". 4:5 portrait photos
+     match the card shape best.
+     ============================================================ */
+  const PRODUCTS = [
+    { id: 1, brand: "Levi's", name: "Trucker Jacket", category: "jackets", size: "M", price: 58,
+      image: "https://placehold.co/600x750/2b1b11/f0e4cd?text=Trucker+Jacket" },
+    { id: 2, brand: "Carhartt", name: "Chore Coat", category: "jackets", size: "L", price: 72,
+      image: "https://placehold.co/600x750/3c2717/e0a458?text=Chore+Coat" },
+    { id: 3, brand: "Ralph Lauren", name: "Oxford Button-Down", category: "shirts", size: "M", price: 28,
+      image: "https://placehold.co/600x750/b1502f/f0e4cd?text=Oxford+Shirt" },
+    { id: 4, brand: "Unbranded", name: "Hawaiian Print Shirt", category: "shirts", size: "L", price: 24,
+      image: "https://placehold.co/600x750/5a3c24/f0e4cd?text=Hawaiian+Shirt" },
+    { id: 5, brand: "Levi's", name: "501 Straight Jeans", category: "pants", size: "W32", price: 46,
+      image: "https://placehold.co/600x750/2b1b11/e0a458?text=501+Jeans" },
+    { id: 6, brand: "Unbranded", name: "Wide-Leg Corduroys", category: "pants", size: "W30", price: 38,
+      image: "https://placehold.co/600x750/b98a4e/2b1b11?text=Corduroys" },
+    { id: 7, brand: "Coach", name: "Leather Belt", category: "accessories", size: "One Size", price: 22,
+      image: "https://placehold.co/600x750/2b1b11/b98a4e?text=Leather+Belt" },
+    { id: 8, brand: "Unbranded", name: "Silk Paisley Scarf", category: "accessories", size: "One Size", price: 16,
+      image: "https://placehold.co/600x750/b1502f/f0e4cd?text=Paisley+Scarf" }
+  ];
+
+  /* ============================================================
+     STATE
+     ============================================================ */
+  let currentFilter = "all";
+  let cart = {}; // { productId: quantity }
+
+  /* ============================================================
+     RENDER: PRODUCT GRID
+     ============================================================ */
+  function renderProducts() {
+    const grid = document.getElementById("productGrid");
+    const visible = currentFilter === "all" ? PRODUCTS : PRODUCTS.filter(p => p.category === currentFilter);
+
+    document.getElementById("itemCount").textContent =
+      `${visible.length} piece${visible.length === 1 ? "" : "s"} available`;
+
+    // Clean up scroll-triggered animations tied to cards we're about to remove
+    if (window.ScrollTrigger) {
+      ScrollTrigger.getAll().forEach(st => {
+        if (st.vars.trigger && st.vars.trigger.classList && st.vars.trigger.classList.contains("product-card")) {
+          st.kill();
+        }
+      });
+    }
+
+    if (visible.length === 0) {
+      grid.innerHTML = `<div class="empty-state">Nothing in this category yet — check back soon.</div>`;
+      return;
+    }
+
+    grid.innerHTML = visible.map(p => `
+      <div class="product-card">
+        <div class="price-tag">$${p.price}</div>
+        <img class="product-photo" src="${p.image}" alt="${p.brand} ${p.name}">
+        <div class="product-info">
+          <div class="product-brand">${p.brand}</div>
+          <div class="product-name">${p.name}</div>
+          <div class="product-meta"><span class="product-size">Size ${p.size}</span></div>
+          <button class="add-btn" id="add-${p.id}" onclick="addToCart(${p.id})">Add to Cart</button>
+        </div>
+      </div>
+    `).join("");
+
+    animateProductCards();
+  }
+
+  /* GSAP ScrollTrigger: cards fade + slide up as they enter the viewport.
+     Runs after every render, so it also covers cards revealed by filtering. */
+  function animateProductCards() {
+    if (!window.gsap || !window.ScrollTrigger) return;
+    const cards = document.querySelectorAll(".product-card");
+    cards.forEach((card, i) => {
+      gsap.fromTo(card,
+        { opacity: 0, y: 50 },
+        {
+          opacity: 1, y: 0, duration: 0.7, ease: "power2.out",
+          delay: (i % 4) * 0.05,
+          scrollTrigger: { trigger: card, start: "top 88%", toggleActions: "play none none none" }
+        }
+      );
+    });
+  }
+
+  /* Filter bar clicks */
+  document.getElementById("filterBar").addEventListener("click", (e) => {
+    const btn = e.target.closest(".filter-pill");
+    if (!btn) return;
+    document.querySelectorAll(".filter-pill").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    currentFilter = btn.dataset.category;
+    renderProducts();
+  });
+
+  /* ============================================================
+     CART LOGIC
+     ============================================================ */
+  function addToCart(id) {
+    cart[id] = (cart[id] || 0) + 1;
+    updateCartUI();
+    const btn = document.getElementById(`add-${id}`);
+    if (btn) {
+      const original = btn.textContent;
+      btn.textContent = "Added ✓";
+      btn.classList.add("added");
+      setTimeout(() => { btn.textContent = original; btn.classList.remove("added"); }, 900);
+    }
+  }
+
+  function changeQty(id, delta) {
+    if (!cart[id]) return;
+    cart[id] += delta;
+    if (cart[id] <= 0) delete cart[id];
+    updateCartUI();
+  }
+
+  function removeFromCart(id) { delete cart[id]; updateCartUI(); }
+
+  function getCartEntries() {
+    return Object.entries(cart).map(([id, qty]) => {
+      const product = PRODUCTS.find(p => p.id === Number(id));
+      return { product, qty };
+    }).filter(entry => entry.product);
+  }
+
+  function updateCartUI() {
+    const entries = getCartEntries();
+    const itemsEl = document.getElementById("cartItems");
+    const countEl = document.getElementById("cartCount");
+    const totalEl = document.getElementById("cartTotal");
+    const orderBtn = document.getElementById("placeOrderBtn");
+
+    const totalQty = entries.reduce((sum, e) => sum + e.qty, 0);
+    const totalPrice = entries.reduce((sum, e) => sum + e.qty * e.product.price, 0);
+
+    countEl.textContent = totalQty;
+    totalEl.textContent = `$${totalPrice}`;
+    orderBtn.disabled = entries.length === 0;
+
+    if (entries.length === 0) {
+      itemsEl.innerHTML = `<div class="cart-empty">Your cart is empty.<br>Go find something worth keeping.</div>`;
+      return;
+    }
+
+    itemsEl.innerHTML = entries.map(({ product, qty }) => `
+      <div class="cart-item">
+        <img src="${product.image}" alt="${product.name}">
+        <div class="cart-item-info">
+          <div class="cart-item-name">${product.brand} — ${product.name}</div>
+          <div class="cart-item-meta">Size ${product.size}</div>
+          <div class="cart-item-row">
+            <div class="qty-control">
+              <button onclick="changeQty(${product.id}, -1)">–</button>
+              <span>${qty}</span>
+              <button onclick="changeQty(${product.id}, 1)">+</button>
+            </div>
+            <span class="cart-item-price">$${product.price * qty}</span>
+          </div>
+          <button class="remove-btn" onclick="removeFromCart(${product.id})">Remove</button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  /* ============================================================
+     CART DRAWER OPEN/CLOSE — animated with GSAP (elastic slide-in)
+     instead of a plain CSS transition.
+     ============================================================ */
+  function openCart() {
+    document.getElementById("cartOverlay").classList.add("open");
+    gsap.killTweensOf("#cartDrawer");
+    gsap.to("#cartDrawer", { xPercent: 0, duration: 0.9, ease: "elastic.out(1, 0.65)" });
+  }
+  function closeCart() {
+    document.getElementById("cartOverlay").classList.remove("open");
+    gsap.killTweensOf("#cartDrawer");
+    gsap.to("#cartDrawer", { xPercent: 100, duration: 0.45, ease: "power2.in" });
+  }
+
+  /* ============================================================
+     CHECKOUT — compiles the cart into a pre-filled email, since
+     there's no backend/database.
+     ============================================================ */
+  function placeOrder() {
+    const entries = getCartEntries();
+    if (entries.length === 0) return;
+
+    const name = document.getElementById("buyerName").value.trim();
+    const note = document.getElementById("buyerNote").value.trim();
+    const totalPrice = entries.reduce((sum, e) => sum + e.qty * e.product.price, 0);
+
+    let body = `New order from ${SHOP_NAME}'s website:\n\n`;
+    entries.forEach(({ product, qty }) => {
+      body += `${qty} x ${product.brand} ${product.name} (Size ${product.size}) — $${product.price} each = $${product.price * qty}\n`;
+    });
+    body += `\nTOTAL: $${totalPrice}\n`;
+    if (name) body += `\nBuyer: ${name}`;
+    if (note) body += `\nNote / shipping address: ${note}`;
+
+    const subject = "New Order - GemsFromFabric";
+    const mailtoLink = `mailto:${SHOP_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoLink;
+  }
+
+  /* ============================================================
+     THREE.JS HERO SCENE
+     Warm dust motes + a few translucent "fabric" planes drifting
+     in a soft spotlight, with gentle mouse-driven parallax.
+     Wrapped in try/catch so a WebGL failure never breaks the page.
+     ============================================================ */
+  function initHeroScene() {
+    const canvas = document.getElementById("heroCanvas");
+    if (!canvas || typeof THREE === "undefined") return;
+
+    let renderer, scene, camera;
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    } catch (e) { return; }
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const wrap = canvas.parentElement;
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(50, wrap.clientWidth / wrap.clientHeight, 0.1, 100);
+    camera.position.set(0, 0, 12);
+
+    function resize() {
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+
+    // Warm, low, "shop lamp" lighting
+    scene.add(new THREE.AmbientLight(0x3c2717, 1.4));
+    const spotlight = new THREE.PointLight(0xe0a458, 2.4, 40);
+    spotlight.position.set(2, 4, 8);
+    scene.add(spotlight);
+    const fillLight = new THREE.PointLight(0xb1502f, 0.6, 40);
+    fillLight.position.set(-6, -3, 4);
+    scene.add(fillLight);
+
+    // Floating fabric-like planes — like swatches drifting on a rack
+    const planes = [];
+    const planeGeo = new THREE.PlaneGeometry(2.2, 3);
+    const swatchColors = [0xe0a458, 0xb1502f, 0xc7b696, 0x5a3c24, 0xb98a4e];
+    for (let i = 0; i < 5; i++) {
+      const mat = new THREE.MeshStandardMaterial({
+        color: swatchColors[i % swatchColors.length],
+        transparent: true, opacity: 0.22, side: THREE.DoubleSide, roughness: 0.85, metalness: 0.05
+      });
+      const mesh = new THREE.Mesh(planeGeo, mat);
+      mesh.position.set((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6 - 2);
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      mesh.userData.speed = 0.05 + Math.random() * 0.08;
+      scene.add(mesh);
+      planes.push(mesh);
+    }
+
+    // Dust motes floating in the "spotlight"
+    const dustCount = 420;
+    const positions = new Float32Array(dustCount * 3);
+    for (let i = 0; i < dustCount; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 16;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 10;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 10;
+    }
+    const dustGeo = new THREE.BufferGeometry();
+    dustGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const dustMat = new THREE.PointsMaterial({
+      color: 0xf6c98a, size: 0.05, transparent: true, opacity: 0.65,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    const dust = new THREE.Points(dustGeo, dustMat);
+    scene.add(dust);
+
+    // Mouse-driven parallax
+    let mouseX = 0, mouseY = 0, targetX = 0, targetY = 0;
+    window.addEventListener("mousemove", (e) => {
+      mouseX = (e.clientX / window.innerWidth) - 0.5;
+      mouseY = (e.clientY / window.innerHeight) - 0.5;
+    });
+
+    resize();
+    window.addEventListener("resize", resize);
+
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      targetX += (mouseX - targetX) * 0.03;
+      targetY += (mouseY - targetY) * 0.03;
+      camera.position.x = targetX * 2.5;
+      camera.position.y = -targetY * 1.5;
+      camera.lookAt(0, 0, 0);
+
+      planes.forEach((p, i) => {
+        p.rotation.x += p.userData.speed * 0.01;
+        p.rotation.y += p.userData.speed * 0.015;
+        p.position.y += Math.sin(t * 0.3 + i) * 0.0015;
+      });
+
+      dust.rotation.y = t * 0.02;
+      dust.position.y = Math.sin(t * 0.15) * 0.2;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+  }
+
+  /* ============================================================
+     LOGO HOVER — GSAP scale + sweeping shine
+     ============================================================ */
+  function initLogoAnimation() {
+    const wrap = document.getElementById("logoWrap");
+    const shine = document.getElementById("logoShine");
+    if (!wrap || !window.gsap) return;
+    wrap.addEventListener("mouseenter", () => {
+      gsap.to(wrap, { scale: 1.07, duration: 0.35, ease: "power2.out" });
+      gsap.fromTo(shine, { xPercent: -150 }, { xPercent: 250, duration: 0.9, ease: "power2.out" });
+    });
+    wrap.addEventListener("mouseleave", () => {
+      gsap.to(wrap, { scale: 1, duration: 0.35, ease: "power2.out" });
+    });
+  }
+
+  /* ============================================================
+     INIT
+     ============================================================ */
+  document.addEventListener("DOMContentLoaded", () => {
+    if (window.gsap && window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
+
+    gsap.set("#cartDrawer", { xPercent: 100 });
+
+    initHeroScene();
+    initLogoAnimation();
+    renderProducts();
+    updateCartUI();
+
+    // Page-load timeline: navbar drops in, hero text fades up, canvas fades in
+    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+    tl.from(".site-header", { y: -70, opacity: 0, duration: 0.8 })
+      .from(".hero-eyebrow", { y: 20, opacity: 0, duration: 0.6 }, "-=0.3")
+      .from(".hero-heading", { y: 30, opacity: 0, duration: 0.8 }, "-=0.4")
+      .from(".hero-sub", { y: 20, opacity: 0, duration: 0.6 }, "-=0.5")
+      .from(".hero-cta", { y: 20, opacity: 0, duration: 0.6 }, "-=0.4")
+      .to("#heroCanvas", { opacity: 1, duration: 1.3 }, "-=0.9");
+  });
+</script>
+
+</body>
+</html>
