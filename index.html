@@ -1538,50 +1538,6 @@
     try { initHeroScene(); } catch (e) { console.warn("Hero 3D scene skipped:", e); }
   });
 </script>
-  // ============================================================
-// ADMIN PANEL LOGIC
-// ============================================================
-const ADMIN_SECRET = "1234"; // 👈 Set your desired admin password/code here
-
-function checkAdminAccess() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const adminParam = urlParams.get('admin');
-
-  if (adminParam === ADMIN_SECRET) {
-    openAdminPanel();
-  }
-}
-
-function openAdminPanel() {
-  const adminPanel = document.getElementById('adminPanel');
-  const adminOverlay = document.getElementById('adminOverlay');
-
-  if (adminPanel) adminPanel.classList.add('open');
-  if (adminOverlay) adminOverlay.classList.add('open');
-
-  loadAdminOrders();
-}
-
-function closeAdminPanel() {
-  const adminPanel = document.getElementById('adminPanel');
-  const adminOverlay = document.getElementById('adminOverlay');
-
-  if (adminPanel) adminPanel.classList.remove('open');
-  if (adminOverlay) adminOverlay.classList.remove('open');
-}
-
-function loadAdminOrders() {
-  const body = document.getElementById('adminPanelBody');
-  const list = document.getElementById('ordersList');
-
-  // Placeholder for rendering orders from localStorage or your Google Script endpoint
-  const sampleContent = '<p class="no-orders">No pending orders found.</p>';
-  if (body) body.innerHTML = sampleContent;
-  if (list) list.innerHTML = sampleContent;
-}
-
-// Automatically check URL when the page finishes loading
-window.addEventListener('DOMContentLoaded', checkAdminAccess);
-
+  
 </body>
 </html>
