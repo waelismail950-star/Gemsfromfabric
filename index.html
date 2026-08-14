@@ -1539,5 +1539,149 @@
   });
 </script>
 
+<!-- ============================================================ -->
+<!-- ADMIN PANEL HTML -->
+<!-- ============================================================ -->
+<div id="adminOverlay" class="admin-overlay" onclick="closeAdminPanel()"></div>
+
+<div id="adminPanel" class="admin-panel">
+  <div class="admin-header">
+    <h2>⚙️ Admin Panel - Incoming Orders</h2>
+    <button class="close-btn" onclick="closeAdminPanel()">&times;</button>
+  </div>
+  
+  <div id="adminPanelBody" class="admin-body">
+    <!-- Orders will load here dynamically -->
+  </div>
+
+  <div class="admin-footer">
+    <button class="clear-btn" onclick="clearAllOrders()">Clear All Orders</button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ADMIN PANEL STYLES (CSS) -->
+<!-- ============================================================ -->
+<style>
+  .admin-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 9998;
+  }
+
+  .admin-panel {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%; max-width: 600px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    z-index: 9999;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+  }
+
+  .admin-overlay.open, .admin-panel.open {
+    display: block;
+  }
+
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+  }
+
+  .close-btn {
+    background: none; border: none;
+    font-size: 24px; cursor: pointer;
+  }
+
+  .admin-body {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 15px 0;
+  }
+
+  .order-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #f9f9f9;
+  }
+
+  .clear-btn {
+    background-color: #d9534f;
+    color: white; border: none;
+    padding: 8px 16px; border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .clear-btn:hover {
+    background-color: #c9302c;
+  }
+</style>
+
+<!-- ============================================================ -->
+<!-- ADMIN PANEL LOGIC (JAVASCRIPT) -->
+<!-- ============================================================ -->
+<script>
+  const ADMIN_SECRET = "1234"; // Change this to your password!
+
+  // Check URL parameter on page load
+  window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('admin') === ADMIN_SECRET) {
+      openAdminPanel();
+    }
+  });
+
+  function openAdminPanel() {
+    document.getElementById('adminPanel')?.classList.add('open');
+    document.getElementById('adminOverlay')?.classList.add('open');
+    loadAdminOrders();
+  }
+
+  function closeAdminPanel() {
+    document.getElementById('adminPanel')?.classList.remove('open');
+    document.getElementById('adminOverlay')?.classList.remove('open');
+  }
+
+  function loadAdminOrders() {
+    const body = document.getElementById('adminPanelBody');
+    if (!body) return;
+
+    // Load orders saved in localStorage
+    const orders = JSON.parse(localStorage.getItem('site_orders') || '[]');
+
+    if (orders.length === 0) {
+      body.innerHTML = '<p style="text-align:center; color:#777;">No pending orders found.</p>';
+      return;
+    }
+
+    body.innerHTML = orders.map((order, index) => `
+      <div class="order-card">
+        <strong>Order #${index + 1}</strong>
+        <p><strong>Name:</strong> ${order.name || 'N/A'}</p>
+        <p><strong>Phone:</strong> ${order.phone || 'N/A'}</p>
+        <p><strong>Address:</strong> ${order.address || 'N/A'}</p>
+        <p><strong>Total:</strong> $${order.total || '0'}</p>
+      </div>
+    `).join('');
+  }
+
+  function clearAllOrders() {
+    if (confirm("Are you sure you want to clear all orders?")) {
+      localStorage.removeItem('site_orders');
+      loadAdminOrders();
+    }
+  }
+</script>
 </body>
 </html>
