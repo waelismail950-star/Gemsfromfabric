@@ -327,59 +327,6 @@
 
   .order-note { margin-top: 10px; font-size: 0.72rem; color: var(--cream-soft); text-align: center; }
 
-  /* ============================================================
-     ADMIN PANEL — password-protected order management
-     ============================================================ */
-  .admin-overlay {
-    position: fixed; inset: 0; background: rgba(10, 6, 3, 0.6);
-    opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; z-index: 60;
-  }
-  .admin-overlay.open { opacity: 1; visibility: visible; }
-
-  .admin-panel {
-    position: fixed; top: 0; right: 0; height: 100%; width: min(520px, 95vw);
-    background: var(--wood); border-left: 1px solid var(--wood-light);
-    box-shadow: -10px 0 40px rgba(0,0,0,0.4);
-    transform: translateX(100%);
-    transition: transform 0.4s cubic-bezier(0.34, 1.45, 0.64, 1);
-    z-index: 70;
-    display: flex; flex-direction: column;
-  }
-  .admin-panel.open { transform: translateX(0); }
-
-  .admin-header { display: flex; justify-content: space-between; align-items: center; padding: 22px; border-bottom: 1px solid var(--wood-light); }
-  .admin-header h2 { font-size: 1.4rem; margin: 0; }
-  .admin-close { font-size: 1.4rem; line-height: 1; color: var(--cream-soft); }
-  .admin-close:hover { color: var(--rust); }
-
-  .admin-content { flex: 1; overflow-y: auto; padding: 22px; }
-  .orders-list { display: flex; flex-direction: column; gap: 16px; }
-  .no-orders { text-align: center; color: var(--cream-soft); padding: 40px 0; }
-
-  .order-item {
-    background: var(--wood-dark); border: 1px solid var(--wood-light); border-radius: var(--radius);
-    padding: 16px; color: var(--cream);
-  }
-  .order-id { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--cream-soft); margin-bottom: 8px; }
-  .order-details { font-size: 0.9rem; margin-bottom: 12px; line-height: 1.5; }
-  .order-total { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--amber); margin: 8px 0; }
-  .order-actions { display: flex; gap: 10px; }
-  .order-reject-btn, .order-accept-btn {
-    flex: 1; padding: 10px; border-radius: var(--radius); font-family: 'Space Mono', monospace;
-    font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.2s;
-  }
-  .order-accept-btn { background: var(--amber); color: var(--wood-dark); }
-  .order-accept-btn:hover { background: var(--amber-glow); }
-  .order-reject-btn { background: var(--rust); color: var(--cream); border: none; }
-  .order-reject-btn:hover { opacity: 0.8; }
-
-  .order-item.accepted { opacity: 0.5; }
-  .order-item.accepted .order-actions { display: none; }
-  .order-status {
-    font-family: 'Space Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
-    color: var(--amber); margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--wood-light);
-  }
-
   @media (max-width: 720px) {
     .nav-links { gap: 14px; }
     .nav-links .nav-label { display: none; }
@@ -390,7 +337,9 @@
     * { transition: none !important; scroll-behavior: auto !important; }
   }
 
-  /* ADMIN PANEL */
+  /* ============================================================
+     ADMIN PANEL — order management (approve/reject incoming orders)
+     ============================================================ */
   .admin-panel { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; }
   .admin-panel.open { display: flex; align-items: center; justify-content: center; }
   .admin-panel-content {
@@ -565,19 +514,6 @@
 
       <button class="place-order-btn" id="placeOrderBtn" onclick="placeOrder()" disabled>Place Order</button>
       <p class="order-note" id="orderNoteText"></p>
-    </div>
-  </aside>
-
-  <div class="admin-overlay" id="adminOverlay" onclick="closeAdminPanel()"></div>
-  <aside class="admin-panel" id="adminPanel">
-    <div class="admin-header">
-      <h2>Orders</h2>
-      <button class="admin-close" onclick="closeAdminPanel()">&times;</button>
-    </div>
-    <div class="admin-content">
-      <div class="orders-list" id="ordersList">
-        <p class="no-orders">No pending orders yet.</p>
-      </div>
     </div>
   </aside>
 
@@ -1230,94 +1166,6 @@
     }, 4000);
   }
 
-  /* ================================================================
-     ADMIN PANEL — order management for approving/rejecting orders
-     and restoring stock if needed.
-     ================================================================ */
-  const ADMIN_PASSWORD = "gems2024"; // change this to something only you know
-
-  function saveOrderToLocalStorage(orderId, orderData) {
-    const orders = JSON.parse(localStorage.getItem("gemsfromfabric_orders") || "{}");
-    orders[orderId] = orderData;
-    localStorage.setItem("gemsfromfabric_orders", JSON.stringify(orders));
-  }
-
-  function getOrdersFromLocalStorage() {
-    const orders = JSON.parse(localStorage.getItem("gemsfromfabric_orders") || "{}");
-    return Object.entries(orders).map(([id, data]) => ({ id, ...data }))
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  }
-
-  function openAdminPanel() {
-    const pwd = prompt("Admin password:");
-    if (pwd !== ADMIN_PASSWORD) {
-      alert("Incorrect password");
-      return;
-    }
-    document.getElementById("adminOverlay").classList.add("open");
-    document.getElementById("adminPanel").classList.add("open");
-    renderOrdersList();
-  }
-
-  function closeAdminPanel() {
-    document.getElementById("adminOverlay").classList.remove("open");
-    document.getElementById("adminPanel").classList.remove("open");
-  }
-
-  function renderOrdersList() {
-    const orders = getOrdersFromLocalStorage();
-    const listEl = document.getElementById("ordersList");
-
-    if (orders.length === 0) {
-      listEl.innerHTML = `<p class="no-orders">No orders yet.</p>`;
-      return;
-    }
-
-    listEl.innerHTML = orders.map(order => {
-      const date = new Date(order.timestamp).toLocaleString();
-      const itemsText = order.items.map(i => `${i.qty}x ${i.brand} ${i.name}`).join(", ");
-      const isProcessed = order.status !== 'pending';
-
-      return `
-        <div class="order-item ${isProcessed ? order.status : ''}">
-          <div class="order-id">${order.id}</div>
-          <div class="order-details">
-            <strong>${date}</strong><br>
-            ${itemsText}<br>
-            Phone: ${order.phone}
-            ${order.name ? `<br>Name: ${order.name}` : ''}
-            ${order.note ? `<br>Note: ${order.note}` : ''}
-          </div>
-          <div class="order-total">Total: $${order.totals.total}</div>
-          ${isProcessed ? `
-            <div class="order-status">${order.status === 'accepted' ? '✓ Accepted' : '✗ Rejected'}</div>
-          ` : `
-            <div class="order-actions">
-              <button class="order-accept-btn" onclick="acceptOrder('${order.id}')">Accept</button>
-              <button class="order-reject-btn" onclick="rejectOrder('${order.id}')">Reject</button>
-            </div>
-          `}
-        </div>
-      `;
-    }).join("");
-  }
-
-  function acceptOrder(orderId) {
-    const orders = JSON.parse(localStorage.getItem("gemsfromfabric_orders") || "{}");
-    if (orders[orderId]) {
-      orders[orderId].status = 'accepted';
-      localStorage.setItem("gemsfromfabric_orders", JSON.stringify(orders));
-      renderOrdersList();
-    }
-  }
-
-
-  // Keyboard shortcut to open admin panel: Ctrl+Shift+O
-  document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'O') {
-      openAdminPanel();
-    }
-  });
   function initHeroScene() {
     const canvas = document.getElementById("heroCanvas");
     if (!canvas || typeof THREE === "undefined") return;
@@ -1537,151 +1385,6 @@
     try { initLogoAnimation(); } catch (e) { console.warn("Logo animation skipped:", e); }
     try { initHeroScene(); } catch (e) { console.warn("Hero 3D scene skipped:", e); }
   });
-</script>
-
-<!-- ============================================================ -->
-<!-- ADMIN PANEL HTML -->
-<!-- ============================================================ -->
-<div id="adminOverlay" class="admin-overlay" onclick="closeAdminPanel()"></div>
-
-<div id="adminPanel" class="admin-panel">
-  <div class="admin-header">
-    <h2>⚙️ Admin Panel - Incoming Orders</h2>
-    <button class="close-btn" onclick="closeAdminPanel()">&times;</button>
-  </div>
-  
-  <div id="adminPanelBody" class="admin-body">
-    <!-- Orders will load here dynamically -->
-  </div>
-
-  <div class="admin-footer">
-    <button class="clear-btn" onclick="clearAllOrders()">Clear All Orders</button>
-  </div>
-</div>
-
-<!-- ============================================================ -->
-<!-- ADMIN PANEL STYLES (CSS) -->
-<!-- ============================================================ -->
-<style>
-  .admin-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 9998;
-  }
-
-  .admin-panel {
-    display: none;
-    position: fixed;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90%; max-width: 600px;
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    z-index: 9999;
-    padding: 20px;
-    font-family: Arial, sans-serif;
-  }
-
-  .admin-overlay.open, .admin-panel.open {
-    display: block;
-  }
-
-  .admin-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px solid #eee;
-    padding-bottom: 10px;
-  }
-
-  .close-btn {
-    background: none; border: none;
-    font-size: 24px; cursor: pointer;
-  }
-
-  .admin-body {
-    max-height: 400px;
-    overflow-y: auto;
-    margin: 15px 0;
-  }
-
-  .order-card {
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 10px;
-    background: #f9f9f9;
-  }
-
-  .clear-btn {
-    background-color: #d9534f;
-    color: white; border: none;
-    padding: 8px 16px; border-radius: 4px;
-    cursor: pointer;
-  }
-
-  .clear-btn:hover {
-    background-color: #c9302c;
-  }
-</style>
-
-<!-- ============================================================ -->
-<!-- ADMIN PANEL LOGIC (JAVASCRIPT) -->
-<!-- ============================================================ -->
-<script>
-  const ADMIN_SECRET = "1234"; // Change this to your password!
-
-  // Check URL parameter on page load
-  window.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('admin') === ADMIN_SECRET) {
-      openAdminPanel();
-    }
-  });
-
-  function openAdminPanel() {
-    document.getElementById('adminPanel')?.classList.add('open');
-    document.getElementById('adminOverlay')?.classList.add('open');
-    loadAdminOrders();
-  }
-
-  function closeAdminPanel() {
-    document.getElementById('adminPanel')?.classList.remove('open');
-    document.getElementById('adminOverlay')?.classList.remove('open');
-  }
-
-  function loadAdminOrders() {
-    const body = document.getElementById('adminPanelBody');
-    if (!body) return;
-
-    // Load orders saved in localStorage
-    const orders = JSON.parse(localStorage.getItem('site_orders') || '[]');
-
-    if (orders.length === 0) {
-      body.innerHTML = '<p style="text-align:center; color:#777;">No pending orders found.</p>';
-      return;
-    }
-
-    body.innerHTML = orders.map((order, index) => `
-      <div class="order-card">
-        <strong>Order #${index + 1}</strong>
-        <p><strong>Name:</strong> ${order.name || 'N/A'}</p>
-        <p><strong>Phone:</strong> ${order.phone || 'N/A'}</p>
-        <p><strong>Address:</strong> ${order.address || 'N/A'}</p>
-        <p><strong>Total:</strong> $${order.total || '0'}</p>
-      </div>
-    `).join('');
-  }
-
-  function clearAllOrders() {
-    if (confirm("Are you sure you want to clear all orders?")) {
-      localStorage.removeItem('site_orders');
-      loadAdminOrders();
-    }
-  }
 </script>
 </body>
 </html>
