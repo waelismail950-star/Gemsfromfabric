@@ -605,13 +605,15 @@
   ];
 
   /* ================================================================
-     STOCK — the Apps Script + Google Sheet is the source of truth.
-     On load we fetch current counts from the "Stock" sheet and merge
-     them onto PRODUCTS, so what customers see reflects what every
-     other customer's browser has already bought — not just this one.
-     If the fetch fails (e.g. the backend isn't deployed yet), we fall
-     back to the numbers hardcoded in PRODUCTS above so the shop still
-     works, just without cross-device accuracy.
+     STOCK + IMAGES — the Apps Script + Google Sheet's "Stock" tab is
+     the source of truth for both. On load we fetch current counts
+     (and, if that column's filled in, a photo URL) and merge them
+     onto PRODUCTS, so what customers see reflects what every other
+     customer's browser has already bought — not just this one — and
+     changing a photo is just pasting a new URL into that sheet, no
+     code or redeploy needed. If the fetch fails (e.g. the backend
+     isn't deployed yet), we fall back to the numbers/images hardcoded
+     in PRODUCTS above so the shop still works either way.
      ================================================================ */
   async function fetchStock() {
     try {
@@ -619,8 +621,15 @@
       const data = await res.json();
       if (data && data.stock) {
         PRODUCTS.forEach(p => {
-          if (data.stock[p.id] !== undefined) {
-            p.stock = Number(data.stock[p.id]);
+          const entry = data.stock[p.id];
+          if (entry === undefined) return;
+          // Older deployments of Code.gs return a plain number instead of
+          // {stock, image} — handle both so this doesn't break mid-rollout.
+          if (typeof entry === "object" && entry !== null) {
+            p.stock = Number(entry.stock);
+            if (entry.image) p.image = entry.image;
+          } else {
+            p.stock = Number(entry);
           }
         });
       }
