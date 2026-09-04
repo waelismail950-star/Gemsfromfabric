@@ -223,15 +223,24 @@
     transition: transform 0.5s cubic-bezier(0.34, 1.45, 0.64, 1); /* soft overshoot, no JS library required */
     z-index: 50;
     display: flex; flex-direction: column;
+    overflow-y: auto;
   }
   .cart-drawer.open { transform: translateX(0); }
 
-  .cart-header { display: flex; justify-content: space-between; align-items: center; padding: 22px 22px 16px; border-bottom: 1px solid var(--wood-light); }
+  /* Sticky so it stays visible while the drawer's own content (items +
+     footer together) scrolls as one unit below it — this is what keeps
+     ordered items from getting crushed into a tiny sliver when the
+     footer (totals/payment/fields) grows taller than the drawer. */
+  .cart-header {
+    display: flex; justify-content: space-between; align-items: center; padding: 22px 22px 16px;
+    border-bottom: 1px solid var(--wood-light);
+    position: sticky; top: 0; z-index: 2; background: var(--wood); flex-shrink: 0;
+  }
   .cart-header h2 { font-size: 1.4rem; }
   .cart-close { font-size: 1.4rem; line-height: 1; color: var(--cream-soft); }
   .cart-close:hover { color: var(--rust); }
 
-  .cart-items { flex: 1; overflow-y: auto; padding: 10px 22px; }
+  .cart-items { padding: 10px 22px; }
   .cart-item { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px dashed var(--wood-light); }
   .cart-item img { width: 60px; height: 74px; object-fit: cover; border-radius: var(--radius); flex-shrink: 0; }
   .cart-item-info { flex: 1; min-width: 0; }
@@ -729,7 +738,11 @@
 
   async function fetchProducts() {
     try {
-      const res = await fetch(`${CONFIG.ORDER_ENDPOINT}?action=getProducts`);
+      // cache: "no-store" + a timestamp so the browser can't quietly
+      // serve a stale cached response for this exact URL — without it,
+      // an edit in the sheet could take a while to show up here even
+      // though the server itself already has the new data.
+      const res = await fetch(`${CONFIG.ORDER_ENDPOINT}?action=getProducts&_=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (data && Array.isArray(data.products)) {
         PRODUCTS = mapProducts_(data.products);
@@ -1471,8 +1484,8 @@
 
     let data;
     try {
-      const url = `${CONFIG.ORDER_ENDPOINT}?action=getOrders&secret=${encodeURIComponent(ADMIN_SECRET)}`;
-      const res = await fetch(url);
+      const url = `${CONFIG.ORDER_ENDPOINT}?action=getOrders&secret=${encodeURIComponent(ADMIN_SECRET)}&_=${Date.now()}`;
+      const res = await fetch(url, { cache: "no-store" });
       data = await res.json();
     } catch (e) {
       body.innerHTML = "<p style=\"color: var(--rust);\">Couldn't reach the order server. Check your connection and try again.</p>";
