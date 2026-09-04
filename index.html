@@ -192,17 +192,12 @@
   }
   .search-bar input::placeholder { color: var(--cream-soft); opacity: 0.55; }
   .search-bar input:focus { border-color: var(--amber); background: rgba(0,0,0,0.25); }
-  .search-bar .search-icon {
-    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-    color: var(--cream-soft); opacity: 0.6; pointer-events: none; font-size: 0.9rem;
-  }
   .search-bar .search-clear {
     position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
     background: none; border: none; color: var(--cream-soft); font-size: 1.1rem; line-height: 1;
     cursor: pointer; padding: 4px 6px; opacity: 0.7; display: none;
   }
   .search-bar .search-clear:hover { opacity: 1; color: var(--amber); }
-  .search-bar.has-text .search-icon { display: none; }
   .search-bar.has-text .search-clear { display: block; }
 
   .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 40px; }
@@ -614,7 +609,6 @@
 
     <div class="search-bar" id="searchBar">
       <input type="text" id="searchInput" placeholder="Search brand, name, description..." autocomplete="off">
-      <span class="search-icon">🔍</span>
       <button class="search-clear" id="searchClear" type="button" aria-label="Clear search">×</button>
     </div>
 
