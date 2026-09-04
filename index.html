@@ -18,7 +18,9 @@
 <meta name="twitter:title" content="GemsFromFabric — Hand-Picked Vintage">
 <meta name="twitter:description" content="Hand-picked, one-of-one vintage clothing. Formerly an Instagram closet, now a website.">
 
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%8E%3C/text%3E%3C/svg%3E">
+<!-- Favicon is set at runtime in populateShopInfo() to your actual
+     logo (CONFIG.LOGO_SRC), instead of duplicating that large data URI
+     into the head as well. -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -108,7 +110,7 @@
      hanging in it, rather than evenly bright everywhere. */
   .hero-vignette {
     position: absolute; inset: 0; z-index: 0; pointer-events: none;
-    background: radial-gradient(ellipse at 60% 28%, transparent 35%, rgba(10,6,3,0.55) 90%);
+    background: radial-gradient(ellipse at 60% 26%, transparent 26%, rgba(10,6,3,0.72) 85%);
   }
   #heroCanvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; opacity: 0; }
 
@@ -124,16 +126,20 @@
     animation: bulbSwing 5s ease-in-out infinite;
   }
   .bulb-cord { stroke: var(--cream-soft); stroke-width: 2; opacity: 0.75; }
-  .bulb-cap-black { fill: #1c1815; }
+  .bulb-cap-black {
+    fill: #1c1815;
+    filter: drop-shadow(0 1px 0 rgba(255,255,255,0.08)) drop-shadow(0 -1px 1px rgba(0,0,0,0.6));
+  }
   .bulb-glass-globe {
-    stroke: rgba(255,224,170,0.3); stroke-width: 1;
-    filter: drop-shadow(0 0 10px rgba(246,201,138,0.5)) drop-shadow(0 0 40px rgba(224,164,88,0.55)) drop-shadow(0 0 85px rgba(224,164,88,0.4));
+    stroke: rgba(255,224,170,0.35); stroke-width: 0.75;
+    filter: drop-shadow(0 0 8px rgba(246,201,138,0.45)) drop-shadow(0 0 34px rgba(224,164,88,0.6)) drop-shadow(0 0 80px rgba(224,164,88,0.45));
   }
   .bulb-filament-wire {
-    stroke: #ffcb7a; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
-    filter: drop-shadow(0 0 4px #fff3d6) drop-shadow(0 0 10px rgba(255,180,80,0.9));
+    stroke: #ffd28f; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    filter: drop-shadow(0 0 3px #fff8e8) drop-shadow(0 0 8px rgba(255,190,100,0.95)) drop-shadow(0 0 16px rgba(255,150,60,0.6));
   }
-  .bulb-highlight { fill: #fff8e8; opacity: 0.35; }
+  .bulb-highlight-soft { fill: #fff8e8; opacity: 0.28; }
+  .bulb-highlight-sharp { fill: #ffffff; opacity: 0.75; filter: blur(0.4px); }
 
   @keyframes bulbSwing {
     0%, 100% { transform: rotate(-1.5deg); }
@@ -537,10 +543,12 @@
     <div class="hero-bulb" aria-hidden="true">
       <svg class="hero-bulb-svg" viewBox="0 0 100 220" preserveAspectRatio="xMidYMin meet">
         <defs>
-          <radialGradient id="bulbGlassGrad" cx="50%" cy="46%" r="60%">
-            <stop offset="0%" stop-color="rgba(255,225,170,0.10)" />
-            <stop offset="55%" stop-color="rgba(224,164,88,0.10)" />
-            <stop offset="100%" stop-color="rgba(139,105,60,0.30)" />
+          <radialGradient id="bulbGlassGrad" cx="50%" cy="50%" r="52%">
+            <stop offset="0%" stop-color="rgba(255,244,214,0.55)" />
+            <stop offset="22%" stop-color="rgba(255,214,140,0.28)" />
+            <stop offset="55%" stop-color="rgba(224,164,88,0.12)" />
+            <stop offset="82%" stop-color="rgba(139,105,60,0.16)" />
+            <stop offset="100%" stop-color="rgba(74,60,38,0.4)" />
           </radialGradient>
         </defs>
 
@@ -559,8 +567,9 @@
         <path d="M32 142 Q50 154 68 142" class="bulb-filament-wire" fill="none" />
         <path d="M32 104 Q50 94 68 104" class="bulb-filament-wire" fill="none" />
 
-        <!-- Glass shine -->
-        <ellipse cx="34" cy="102" rx="8" ry="16" class="bulb-highlight" transform="rotate(-22 34 102)" />
+        <!-- Glass shine: soft broad reflection + a sharp specular hotspot -->
+        <ellipse cx="34" cy="102" rx="9" ry="18" class="bulb-highlight-soft" transform="rotate(-22 34 102)" />
+        <ellipse cx="31" cy="97" rx="3" ry="5" class="bulb-highlight-sharp" transform="rotate(-22 31 97)" />
       </svg>
     </div>
     <canvas id="heroCanvas"></canvas>
@@ -854,6 +863,17 @@
   /* Populate header/footer from CONFIG, once, on load. */
   function populateShopInfo() {
     document.getElementById("logoImg").src = CONFIG.LOGO_SRC;
+
+    // Use the real shop logo as the browser tab icon instead of a
+    // generic placeholder — set at runtime so the large logo data URI
+    // isn't duplicated into the <head> as well.
+    let favicon = document.querySelector('link[rel="icon"]');
+    if (!favicon) {
+      favicon = document.createElement("link");
+      favicon.rel = "icon";
+      document.head.appendChild(favicon);
+    }
+    favicon.href = CONFIG.LOGO_SRC;
 
     const emailLink = document.getElementById("footerEmailLink");
     emailLink.textContent = CONFIG.SHOP_EMAIL;
@@ -1451,11 +1471,14 @@
       camera.updateProjectionMatrix();
     }
 
-    scene.add(new THREE.AmbientLight(0x3c2717, 1.4));
-    const spotlight = new THREE.PointLight(0xe0a458, 2.4, 40);
+    // Kept deliberately dim/subtle — this scene should read as things
+    // barely visible in the dark, lit only by the bulb, not as its own
+    // independent light source competing with it.
+    scene.add(new THREE.AmbientLight(0x3c2717, 0.55));
+    const spotlight = new THREE.PointLight(0xe0a458, 1.3, 40);
     spotlight.position.set(2, 4, 8);
     scene.add(spotlight);
-    const fillLight = new THREE.PointLight(0xb1502f, 0.6, 40);
+    const fillLight = new THREE.PointLight(0xb1502f, 0.22, 40);
     fillLight.position.set(-6, -3, 4);
     scene.add(fillLight);
 
@@ -1465,7 +1488,7 @@
     for (let i = 0; i < 5; i++) {
       const mat = new THREE.MeshStandardMaterial({
         color: swatchColors[i % swatchColors.length],
-        transparent: true, opacity: 0.22, side: THREE.DoubleSide, roughness: 0.85, metalness: 0.05
+        transparent: true, opacity: 0.12, side: THREE.DoubleSide, roughness: 0.85, metalness: 0.05
       });
       const mesh = new THREE.Mesh(planeGeo, mat);
       mesh.position.set((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6 - 2);
@@ -1485,7 +1508,7 @@
     const dustGeo = new THREE.BufferGeometry();
     dustGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     const dustMat = new THREE.PointsMaterial({
-      color: 0xf6c98a, size: 0.05, transparent: true, opacity: 0.65,
+      color: 0xf6c98a, size: 0.045, transparent: true, opacity: 0.3,
       blending: THREE.AdditiveBlending, depthWrite: false
     });
     const dust = new THREE.Points(dustGeo, dustMat);
