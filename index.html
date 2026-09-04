@@ -630,113 +630,55 @@
   // correct value, so reading the page source doesn't hand it out.
 
   /* ----------------------------------------------------------------
-     PRODUCT DATA — this is your inventory. Edit this array to add,
-     remove, or change pieces; the grid rebuilds automatically.
+     PRODUCT DATA — this is no longer edited here. The "Products" sheet
+     in your Google Sheet is the entire catalog now: every field below
+     (brand, name, category, size, price, stock, images, description)
+     lives there, one row per product. Add a row with a new Product ID
+     and it's a new listing on the site on next page load; edit any
+     cell and that change is live the same way — no code, no GitHub,
+     no redeploy, for any of it.
 
-     Fields: id (unique), brand, name, category (jackets/shirts/
-     pants/accessories), size, price (plain number), image (URL),
-     stock (plain number — how many you actually have right now).
-
-     STOCK: set this to how many of that exact piece you have. Most of
-     your inventory is one-of-a-kind, so that's usually 1. Set it to 0
-     the moment something sells in real life (in person, on Instagram,
-     etc.) and the card automatically shows "Sold Out" and stops people
-     from adding it to their cart. There's no database behind this —
-     it's just this number, so YOU are the one keeping it accurate.
-
-     IMAGE PLACEHOLDERS: every "image" below points to a placehold.co
-     placeholder. Replace each URL with your own photo — a hosted
-     link (Imgur, a public Google Drive link) or a local path like
-     "images/jacket-01.jpg". 4:5 portrait photos match the cards best.
+     PRODUCTS starts empty and is filled in by fetchProducts() below,
+     which runs before the very first render. See apps-script/README.md
+     for the exact sheet columns and a one-time paste-in of what used
+     to be hardcoded here.
      ---------------------------------------------------------------- */
-  const PRODUCTS = [
-    { id: 1, brand: "Levi's", name: "Trucker Jacket", category: "jackets", size: "M", price: 58, stock: 1,
-      description: "Classic denim trucker jacket, broken in just right. Everyday layer that works over a tee or a hoodie.",
-      image: "https://placehold.co/600x750/2b1b11/f0e4cd?text=Trucker+Jacket" },
-    { id: 2, brand: "Carhartt", name: "Chore Coat", category: "jackets", size: "L", price: 72, stock: 1,
-      description: "Heavyweight duck canvas chore coat. Built for actual work, wears just as well on the street.",
-      image: "https://placehold.co/600x750/3c2717/e0a458?text=Chore+Coat" },
-    { id: 3, brand: "Ralph Lauren", name: "Oxford Button-Down", category: "shirts", size: "M", price: 28, stock: 2,
-      description: "Classic oxford cloth button-down. Clean, versatile, works tucked or untucked.",
-      image: "https://placehold.co/600x750/b1502f/f0e4cd?text=Oxford+Shirt" },
-    { id: 4, brand: "Unbranded", name: "Hawaiian Print Shirt", category: "shirts", size: "L", price: 24, stock: 1,
-      description: "Loud print, lightweight fabric. Warm-weather staple for anyone who wants to stand out a little.",
-      image: "https://placehold.co/600x750/5a3c24/f0e4cd?text=Hawaiian+Shirt" },
-    { id: 5, brand: "Levi's", name: "501 Straight Jeans", category: "pants", size: "W32", price: 46, stock: 1,
-      description: "The original straight-leg 501. Timeless cut, good wash, no tapering.",
-      image: "https://placehold.co/600x750/2b1b11/e0a458?text=501+Jeans" },
-    { id: 6, brand: "Unbranded", name: "Wide-Leg Corduroys", category: "pants", size: "W30", price: 38, stock: 2,
-      description: "Soft-wale corduroy, relaxed wide-leg fit. Comfortable enough for daily wear.",
-      image: "https://placehold.co/600x750/b98a4e/2b1b11?text=Corduroys" },
-    { id: 7, brand: "Coach", name: "Leather Belt", category: "accessories", size: "One Size", price: 22, stock: 3,
-      description: "Genuine leather belt with a solid brass-tone buckle. Ages well with wear.",
-      image: "https://placehold.co/600x750/2b1b11/b98a4e?text=Leather+Belt" },
-    { id: 8, brand: "Unbranded", name: "Silk Paisley Scarf", category: "accessories", size: "One Size", price: 16, stock: 0,
-      description: "Lightweight silk scarf, classic paisley print. Easy way to add texture to an outfit.",
-      image: "https://placehold.co/600x750/b1502f/f0e4cd?text=Paisley+Scarf" },
-    // Below: new pieces added from photos — brand/price/size/description
-    // are rough guesses, edit these directly. Images are placeholders
-    // until real photos are uploaded (Imgur) and the URL(s) pasted into
-    // the Stock sheet's "Image URL" column — no code edit needed for
-    // that part. Multiple photos of the same item: paste more than one
-    // URL in that cell, separated by commas.
-    { id: 9, brand: "Unbranded", name: "LMTF Graphic Tank Top", category: "shirts", size: "M", price: 26, stock: 1,
-      description: "Sleeveless graphic tank, bold horror-manga-style print. One-of-one piece — edit this description with the real details.",
-      image: "https://placehold.co/600x750/1a1a1a/f0e4cd?text=LMTF+Tank" },
-    { id: 10, brand: "Volcom", name: "Embroidered Crewneck Sweatshirt", category: "shirts", size: "L", price: 34, stock: 1,
-      description: "Heavyweight crewneck with the embroidered Volcom stone logo on the chest. Edit this description with the real details.",
-      image: "https://placehold.co/600x750/b98a4e/2b1b11?text=Volcom+Crewneck" },
-    { id: 11, brand: "Unbranded", name: "Belgium Euro 2020 Jersey", category: "shirts", size: "L", price: 22, stock: 1,
-      description: "Belgium national team Euro 2020 jersey. Edit this description with the real details.",
-      image: "https://placehold.co/600x750/1a1a1a/b1502f?text=Belgium+Jersey" },
-    { id: 12, brand: "Nirvana", name: "Smiley Graphic Crewneck", category: "shirts", size: "L", price: 32, stock: 1,
-      description: "Band merch crewneck, tie-dye smiley graphic. Edit this description with the real details.",
-      image: "https://placehold.co/600x750/1a1a1a/e0a458?text=Nirvana+Crewneck" },
-    { id: 13, brand: "Unbranded", name: "Donkey Kong Graphic Tee", category: "shirts", size: "M", price: 24, stock: 1,
-      description: "Graphic tee with a chest-print Donkey Kong design. Edit this description with the real details.",
-      image: "https://placehold.co/600x750/3c2717/f0e4cd?text=Donkey+Kong+Tee" }
-  ];
+  let PRODUCTS = [];
+  let productsLoadFailed = false;
 
   /* ================================================================
-     STOCK + IMAGES — the Apps Script + Google Sheet's "Stock" tab is
-     the source of truth for both. On load we fetch current counts
-     (and, if that column's filled in, a photo URL) and merge them
-     onto PRODUCTS, so what customers see reflects what every other
-     customer's browser has already bought — not just this one — and
-     changing a photo is just pasting a new URL into that sheet, no
-     code or redeploy needed. If the fetch fails (e.g. the backend
-     isn't deployed yet), we fall back to the numbers/images hardcoded
-     in PRODUCTS above so the shop still works either way.
+     PRODUCTS — the Apps Script + Google Sheet's "Products" tab is the
+     entire catalog now, not just stock/images. This fetch has to
+     succeed once before the grid can show anything real, so it's
+     awaited before the first render (see DOMContentLoaded below),
+     with a loading message in the grid while it's in flight and a
+     clear error state if it fails outright — no stale hardcoded
+     catalog to silently fall back to anymore.
      ================================================================ */
-  async function fetchStock() {
+  async function fetchProducts() {
     try {
-      const res = await fetch(`${CONFIG.ORDER_ENDPOINT}?action=getStock`);
+      const res = await fetch(`${CONFIG.ORDER_ENDPOINT}?action=getProducts`);
       const data = await res.json();
-      if (data && data.stock) {
-        PRODUCTS.forEach(p => {
-          const entry = data.stock[p.id];
-          if (entry === undefined) return;
-          // Older deployments of Code.gs return a plain number instead of
-          // {stock, image} — handle both so this doesn't break mid-rollout.
-          if (typeof entry === "object" && entry !== null) {
-            p.stock = Number(entry.stock);
-            // The sheet cell can hold multiple photo URLs separated by
-            // commas (for the quick-view gallery) — split those out, and
-            // keep p.image as the first one for the grid thumbnail.
-            if (entry.image) {
-              const urls = String(entry.image).split(",").map(u => u.trim()).filter(Boolean);
-              if (urls.length) {
-                p.images = urls;
-                p.image = urls[0];
-              }
-            }
-          } else {
-            p.stock = Number(entry);
-          }
-        });
+      if (data && Array.isArray(data.products)) {
+        PRODUCTS = data.products.map(p => ({
+          id: Number(p.id),
+          brand: p.brand || "",
+          name: p.name || "",
+          category: String(p.category || "").trim().toLowerCase(),
+          size: p.size || "",
+          price: Number(p.price) || 0,
+          stock: Number(p.stock) || 0,
+          images: Array.isArray(p.images) && p.images.length ? p.images : ["https://placehold.co/600x750/2b1b11/f0e4cd?text=No+Photo+Yet"],
+          image: (Array.isArray(p.images) && p.images[0]) || "https://placehold.co/600x750/2b1b11/f0e4cd?text=No+Photo+Yet",
+          description: p.description || ""
+        }));
+        productsLoadFailed = false;
+      } else {
+        productsLoadFailed = true;
       }
     } catch (e) {
-      console.warn("Couldn't fetch live stock from the server, using defaults from PRODUCTS:", e);
+      console.warn("Couldn't load the product catalog from the server:", e);
+      productsLoadFailed = true;
     }
   }
 
@@ -778,6 +720,13 @@
      ================================================================ */
   function renderProducts() {
     const grid = document.getElementById("productGrid");
+
+    if (productsLoadFailed) {
+      document.getElementById("itemCount").textContent = "";
+      grid.innerHTML = `<div class="empty-state">Couldn't load the shop right now — check your connection and refresh.</div>`;
+      return;
+    }
+
     const visible = currentFilter === "all" ? PRODUCTS : PRODUCTS.filter(p => p.category === currentFilter);
 
     document.getElementById("itemCount").textContent =
@@ -918,10 +867,10 @@
 
   /* ================================================================
      PRODUCT QUICK VIEW — small modal opened by clicking a card.
-     Multiple photos: the Stock sheet's "Image URL" cell can hold more
-     than one URL separated by commas; fetchStock() below turns that
-     into product.images. If there's only one (or none set), it falls
-     back to product.image so this works with no sheet changes at all.
+     Multiple photos: the Products sheet's "Image URLs" cell can hold
+     more than one URL separated by commas; fetchProducts() turns that
+     into product.images. If there's only one, product.image and
+     product.images[0] are the same thing.
      ================================================================ */
   let quickViewId = null;
   let quickViewImageIndex = 0;
@@ -1267,7 +1216,7 @@
     if (result.status === "rejected") {
       const soldOutNames = (result.items || []).map(i => i.name || i.id).join(", ");
       alert(`Sorry — ${soldOutNames || "an item in your cart"} sold out before your order went through. Please update your cart and try again.`);
-      await fetchStock();
+      await fetchProducts();
       renderProducts();
       updateCartUI();
       return;
@@ -1531,14 +1480,18 @@
      first and does not depend on GSAP/Three.js. Decorative touches
      are layered on afterward and can fail without breaking the shop.
      ================================================================ */
-  document.addEventListener("DOMContentLoaded", () => {
-    // Paint immediately with the defaults baked into PRODUCTS, then
-    // refresh with live server stock once it arrives — keeps first
-    // paint fast instead of blocking on the network round trip.
+  document.addEventListener("DOMContentLoaded", async () => {
+    // Shop info (name, contact links) doesn't depend on the catalog —
+    // show it immediately. The product grid has nothing to show until
+    // the catalog's fetched from the sheet, so it gets a loading state
+    // instead of a stale hardcoded fallback.
     populateShopInfo();
+    document.getElementById("productGrid").innerHTML = `<div class="empty-state">Loading pieces...</div>`;
+    updateCartUI();
+
+    await fetchProducts();
     renderProducts();
     updateCartUI();
-    fetchStock().then(() => { renderProducts(); updateCartUI(); });
 
     // Check for admin panel access via ?admin=CODE in URL
     checkAdminAccess();
