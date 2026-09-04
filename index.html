@@ -4,6 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GemsFromFabric — Hand-Picked Vintage</title>
+<meta name="description" content="Hand-picked, one-of-one vintage clothing — jackets, shirts, pants, and accessories. Formerly an Instagram closet, now a website. Slow fashion, fast shipping.">
+
+<!-- Social preview (WhatsApp/Instagram/iMessage link previews). No
+     og:image yet — pick one product photo or your logo, upload it to
+     Imgur the same way as product photos, and add:
+     <meta property="og:image" content="https://i.imgur.com/....jpg"> -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="GemsFromFabric — Hand-Picked Vintage">
+<meta property="og:description" content="Hand-picked, one-of-one vintage clothing. Formerly an Instagram closet, now a website.">
+<meta property="og:url" content="https://gemsfromfabric.shop">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="GemsFromFabric — Hand-Picked Vintage">
+<meta name="twitter:description" content="Hand-picked, one-of-one vintage clothing. Formerly an Instagram closet, now a website.">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%8E%3C/text%3E%3C/svg%3E">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -86,10 +101,50 @@
   .hero-scene-wrap { position: relative; min-height: 92vh; display: flex; align-items: center; overflow: hidden; }
   .hero-glow {
     position: absolute; inset: 0; z-index: 0;
-    background: radial-gradient(circle at 60% 35%, rgba(224,164,88,0.18), transparent 60%);
+    background: radial-gradient(circle at 60% 28%, rgba(224,164,88,0.26), transparent 58%);
     pointer-events: none;
   }
+  /* Darkens the corners so the scene reads as lit by the one bulb
+     hanging in it, rather than evenly bright everywhere. */
+  .hero-vignette {
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 60% 28%, transparent 35%, rgba(10,6,3,0.55) 90%);
+  }
   #heroCanvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; opacity: 0; }
+
+  /* Hanging bulb — the literal version of "lit by a single warm bulb"
+     from the copy below it. Pure SVG/CSS, no image asset. */
+  .hero-bulb {
+    position: absolute; top: 0; left: 60%; transform: translateX(-50%);
+    width: 130px; height: 52vh; max-height: 420px; z-index: 1; pointer-events: none;
+  }
+  .hero-bulb-svg {
+    width: 100%; height: 100%; overflow: visible;
+    transform-origin: 50% 0%;
+    animation: bulbSwing 5s ease-in-out infinite;
+  }
+  .bulb-cord { stroke: var(--cream-soft); stroke-width: 2; opacity: 0.75; }
+  .bulb-cap-black { fill: #1c1815; }
+  .bulb-glass-globe {
+    stroke: rgba(255,224,170,0.3); stroke-width: 1;
+    filter: drop-shadow(0 0 10px rgba(246,201,138,0.5)) drop-shadow(0 0 40px rgba(224,164,88,0.55)) drop-shadow(0 0 85px rgba(224,164,88,0.4));
+  }
+  .bulb-filament-wire {
+    stroke: #ffcb7a; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+    filter: drop-shadow(0 0 4px #fff3d6) drop-shadow(0 0 10px rgba(255,180,80,0.9));
+  }
+  .bulb-highlight { fill: #fff8e8; opacity: 0.35; }
+
+  @keyframes bulbSwing {
+    0%, 100% { transform: rotate(-1.5deg); }
+    50% { transform: rotate(1.5deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-bulb-svg { animation: none; }
+  }
+  @media (max-width: 720px) {
+    .hero-bulb { left: 50%; width: 85px; height: 34vh; opacity: 0.85; }
+  }
   .hero-content { position: relative; z-index: 2; padding: 0 5vw; max-width: 900px; }
   .hero-eyebrow {
     font-family: 'Space Mono', monospace; font-size: 0.8rem; letter-spacing: 0.15em; text-transform: uppercase;
@@ -478,6 +533,36 @@
 
   <section class="hero-scene-wrap">
     <div class="hero-glow"></div>
+    <div class="hero-vignette"></div>
+    <div class="hero-bulb" aria-hidden="true">
+      <svg class="hero-bulb-svg" viewBox="0 0 100 220" preserveAspectRatio="xMidYMin meet">
+        <defs>
+          <radialGradient id="bulbGlassGrad" cx="50%" cy="46%" r="60%">
+            <stop offset="0%" stop-color="rgba(255,225,170,0.10)" />
+            <stop offset="55%" stop-color="rgba(224,164,88,0.10)" />
+            <stop offset="100%" stop-color="rgba(139,105,60,0.30)" />
+          </radialGradient>
+        </defs>
+
+        <!-- Long cord so the bulb hangs well below the top of the section -->
+        <line x1="50" y1="0" x2="50" y2="62" class="bulb-cord" />
+        <path d="M38 61 L62 61 C64 61 65 63 65 66 L65 74 C65 77 63 79 60 79 L40 79 C37 79 35 77 35 74 L35 66 C35 63 36 61 38 61 Z" class="bulb-cap-black" />
+
+        <!-- Round globe glass -->
+        <circle cx="50" cy="122" r="42" class="bulb-glass-globe" fill="url(#bulbGlassGrad)" />
+
+        <!-- Straight glowing filament wires -->
+        <line x1="32" y1="104" x2="32" y2="142" class="bulb-filament-wire" />
+        <line x1="41" y1="100" x2="41" y2="146" class="bulb-filament-wire" />
+        <line x1="59" y1="100" x2="59" y2="146" class="bulb-filament-wire" />
+        <line x1="68" y1="104" x2="68" y2="142" class="bulb-filament-wire" />
+        <path d="M32 142 Q50 154 68 142" class="bulb-filament-wire" fill="none" />
+        <path d="M32 104 Q50 94 68 104" class="bulb-filament-wire" fill="none" />
+
+        <!-- Glass shine -->
+        <ellipse cx="34" cy="102" rx="8" ry="16" class="bulb-highlight" transform="rotate(-22 34 102)" />
+      </svg>
+    </div>
     <canvas id="heroCanvas"></canvas>
     <div class="hero-content">
       <div class="hero-eyebrow">Est. on Instagram · Now open online</div>
