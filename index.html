@@ -139,7 +139,7 @@
   }
   .product-card:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(0,0,0,0.45), 0 0 0 1px var(--brass); }
 
-  .product-photo { width: 100%; aspect-ratio: 4 / 5; object-fit: contain; object-position: center; background: var(--wood-dark); }
+  .product-photo { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; background: var(--wood-dark); }
 
   .product-card.sold-out .product-photo { filter: grayscale(0.85) brightness(0.5); }
   .sold-out-badge {
@@ -401,7 +401,7 @@
   .qv-close:hover { background: rgba(10, 6, 3, 0.8); }
 
   .qv-gallery { position: relative; background: var(--wood-dark); }
-  .qv-photo { width: 100%; aspect-ratio: 4 / 5; object-fit: contain; object-position: center; display: block; background: var(--wood-dark); }
+  .qv-photo { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; }
   .qv-nav {
     position: absolute; top: 50%; transform: translateY(-50%);
     width: 34px; height: 34px; border-radius: 50%; border: none;
