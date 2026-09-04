@@ -134,7 +134,7 @@
 
   .product-card {
     position: relative; background: var(--wood); border: 1px solid var(--wood-light); border-radius: var(--radius);
-    overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); cursor: pointer;
     transition: transform 0.25s ease, box-shadow 0.25s ease;
   }
   .product-card:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(0,0,0,0.45), 0 0 0 1px var(--brass); }
@@ -372,6 +372,65 @@
   .order-reject:hover { background: #c16040; }
   .order-approve:disabled, .order-reject:disabled { opacity: 0.5; cursor: not-allowed; }
 
+  /* ============================================================
+     PRODUCT QUICK VIEW — click a card, small modal, browse photos
+     + read the description. Not full-screen, not a new tab/page.
+     ============================================================ */
+  .quickview-overlay {
+    position: fixed; inset: 0; background: rgba(10, 6, 3, 0.65);
+    opacity: 0; visibility: hidden; transition: opacity 0.25s ease, visibility 0.25s ease; z-index: 60;
+  }
+  .quickview-overlay.open { opacity: 1; visibility: visible; }
+
+  .quickview-modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.96);
+    width: min(420px, 92vw); max-height: 85vh; overflow-y: auto;
+    background: var(--wood); border: 1px solid var(--wood-light); border-radius: var(--radius);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    opacity: 0; visibility: hidden; transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+    z-index: 61;
+  }
+  .quickview-modal.open { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); }
+
+  .qv-close {
+    position: absolute; top: 10px; right: 10px; z-index: 2;
+    width: 32px; height: 32px; border-radius: 50%; border: none;
+    background: rgba(10, 6, 3, 0.55); color: var(--cream); font-size: 1.3rem; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .qv-close:hover { background: rgba(10, 6, 3, 0.8); }
+
+  .qv-gallery { position: relative; background: var(--wood-dark); }
+  .qv-photo { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; }
+  .qv-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 34px; height: 34px; border-radius: 50%; border: none;
+    background: rgba(10, 6, 3, 0.55); color: var(--cream); font-size: 1.3rem; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .qv-nav:hover { background: rgba(10, 6, 3, 0.8); }
+  .qv-prev { left: 10px; }
+  .qv-next { right: 10px; }
+  .qv-dots { position: absolute; bottom: 12px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
+  .qv-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(240, 228, 205, 0.4); cursor: pointer; border: none; padding: 0; }
+  .qv-dot.active { background: var(--amber); }
+
+  .qv-info { padding: 20px; }
+  .qv-brand { font-family: 'Space Mono', monospace; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--amber); }
+  .qv-name { font-size: 1.25rem; margin: 4px 0 8px; color: var(--cream); }
+  .qv-meta { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+  .qv-size { font-family: 'Space Mono', monospace; font-size: 0.8rem; color: var(--cream-soft); }
+  .qv-price { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--amber); font-size: 1.05rem; }
+  .qv-description { color: var(--cream-soft); font-size: 0.92rem; line-height: 1.55; margin: 10px 0 18px; white-space: pre-wrap; }
+  .qv-add-btn {
+    width: 100%; padding: 13px; border-radius: var(--radius); border: none;
+    background: var(--amber); color: var(--wood-dark); font-family: 'Space Mono', monospace;
+    font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; transition: background 0.2s;
+  }
+  .qv-add-btn:hover:not(:disabled) { background: var(--amber-glow); }
+  .qv-add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .qv-add-btn.added { background: #4a7c4e; color: var(--cream); }
+
 </style>
 </head>
 <body>
@@ -517,6 +576,11 @@
     </div>
   </aside>
 
+  <!-- PRODUCT QUICK VIEW: click a card to open this small modal — a
+       photo gallery + description, not a full-screen page or new tab. -->
+  <div class="quickview-overlay" id="quickviewOverlay" onclick="closeQuickView()"></div>
+  <div class="quickview-modal" id="quickviewModal"></div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -587,21 +651,50 @@
      ---------------------------------------------------------------- */
   const PRODUCTS = [
     { id: 1, brand: "Levi's", name: "Trucker Jacket", category: "jackets", size: "M", price: 58, stock: 1,
+      description: "Classic denim trucker jacket, broken in just right. Everyday layer that works over a tee or a hoodie.",
       image: "https://placehold.co/600x750/2b1b11/f0e4cd?text=Trucker+Jacket" },
     { id: 2, brand: "Carhartt", name: "Chore Coat", category: "jackets", size: "L", price: 72, stock: 1,
+      description: "Heavyweight duck canvas chore coat. Built for actual work, wears just as well on the street.",
       image: "https://placehold.co/600x750/3c2717/e0a458?text=Chore+Coat" },
     { id: 3, brand: "Ralph Lauren", name: "Oxford Button-Down", category: "shirts", size: "M", price: 28, stock: 2,
+      description: "Classic oxford cloth button-down. Clean, versatile, works tucked or untucked.",
       image: "https://placehold.co/600x750/b1502f/f0e4cd?text=Oxford+Shirt" },
     { id: 4, brand: "Unbranded", name: "Hawaiian Print Shirt", category: "shirts", size: "L", price: 24, stock: 1,
+      description: "Loud print, lightweight fabric. Warm-weather staple for anyone who wants to stand out a little.",
       image: "https://placehold.co/600x750/5a3c24/f0e4cd?text=Hawaiian+Shirt" },
     { id: 5, brand: "Levi's", name: "501 Straight Jeans", category: "pants", size: "W32", price: 46, stock: 1,
+      description: "The original straight-leg 501. Timeless cut, good wash, no tapering.",
       image: "https://placehold.co/600x750/2b1b11/e0a458?text=501+Jeans" },
     { id: 6, brand: "Unbranded", name: "Wide-Leg Corduroys", category: "pants", size: "W30", price: 38, stock: 2,
+      description: "Soft-wale corduroy, relaxed wide-leg fit. Comfortable enough for daily wear.",
       image: "https://placehold.co/600x750/b98a4e/2b1b11?text=Corduroys" },
     { id: 7, brand: "Coach", name: "Leather Belt", category: "accessories", size: "One Size", price: 22, stock: 3,
+      description: "Genuine leather belt with a solid brass-tone buckle. Ages well with wear.",
       image: "https://placehold.co/600x750/2b1b11/b98a4e?text=Leather+Belt" },
     { id: 8, brand: "Unbranded", name: "Silk Paisley Scarf", category: "accessories", size: "One Size", price: 16, stock: 0,
-      image: "https://placehold.co/600x750/b1502f/f0e4cd?text=Paisley+Scarf" }
+      description: "Lightweight silk scarf, classic paisley print. Easy way to add texture to an outfit.",
+      image: "https://placehold.co/600x750/b1502f/f0e4cd?text=Paisley+Scarf" },
+    // Below: new pieces added from photos — brand/price/size/description
+    // are rough guesses, edit these directly. Images are placeholders
+    // until real photos are uploaded (Imgur) and the URL(s) pasted into
+    // the Stock sheet's "Image URL" column — no code edit needed for
+    // that part. Multiple photos of the same item: paste more than one
+    // URL in that cell, separated by commas.
+    { id: 9, brand: "Unbranded", name: "LMTF Graphic Tank Top", category: "shirts", size: "M", price: 26, stock: 1,
+      description: "Sleeveless graphic tank, bold horror-manga-style print. One-of-one piece — edit this description with the real details.",
+      image: "https://placehold.co/600x750/1a1a1a/f0e4cd?text=LMTF+Tank" },
+    { id: 10, brand: "Volcom", name: "Embroidered Crewneck Sweatshirt", category: "shirts", size: "L", price: 34, stock: 1,
+      description: "Heavyweight crewneck with the embroidered Volcom stone logo on the chest. Edit this description with the real details.",
+      image: "https://placehold.co/600x750/b98a4e/2b1b11?text=Volcom+Crewneck" },
+    { id: 11, brand: "Unbranded", name: "Belgium Euro 2020 Jersey", category: "shirts", size: "L", price: 22, stock: 1,
+      description: "Belgium national team Euro 2020 jersey. Edit this description with the real details.",
+      image: "https://placehold.co/600x750/1a1a1a/b1502f?text=Belgium+Jersey" },
+    { id: 12, brand: "Nirvana", name: "Smiley Graphic Crewneck", category: "shirts", size: "L", price: 32, stock: 1,
+      description: "Band merch crewneck, tie-dye smiley graphic. Edit this description with the real details.",
+      image: "https://placehold.co/600x750/1a1a1a/e0a458?text=Nirvana+Crewneck" },
+    { id: 13, brand: "Unbranded", name: "Donkey Kong Graphic Tee", category: "shirts", size: "M", price: 24, stock: 1,
+      description: "Graphic tee with a chest-print Donkey Kong design. Edit this description with the real details.",
+      image: "https://placehold.co/600x750/3c2717/f0e4cd?text=Donkey+Kong+Tee" }
   ];
 
   /* ================================================================
@@ -627,7 +720,16 @@
           // {stock, image} — handle both so this doesn't break mid-rollout.
           if (typeof entry === "object" && entry !== null) {
             p.stock = Number(entry.stock);
-            if (entry.image) p.image = entry.image;
+            // The sheet cell can hold multiple photo URLs separated by
+            // commas (for the quick-view gallery) — split those out, and
+            // keep p.image as the first one for the grid thumbnail.
+            if (entry.image) {
+              const urls = String(entry.image).split(",").map(u => u.trim()).filter(Boolean);
+              if (urls.length) {
+                p.images = urls;
+                p.image = urls[0];
+              }
+            }
           } else {
             p.stock = Number(entry);
           }
@@ -703,7 +805,7 @@
       else if (maxedOut) btnLabel = "Max in Cart";
 
       return `
-      <div class="product-card ${soldOut ? "sold-out" : ""}">
+      <div class="product-card ${soldOut ? "sold-out" : ""}" onclick="openQuickView(${p.id})">
         ${soldOut ? '<div class="sold-out-badge">Sold Out</div>' : ""}
         <div class="price-tag">$${p.price}</div>
         <img class="product-photo" src="${p.image}" alt="${p.brand} ${p.name}">
@@ -714,7 +816,7 @@
             <span class="product-size">Size ${p.size}</span>
             ${!soldOut && p.stock <= 2 ? `<span class="low-stock">Only ${p.stock} left</span>` : ""}
           </div>
-          <button class="add-btn" id="add-${p.id}" onclick="addToCart(${p.id})" ${soldOut || maxedOut ? "disabled" : ""}>${btnLabel}</button>
+          <button class="add-btn" id="add-${p.id}" onclick="event.stopPropagation(); addToCart(${p.id})" ${soldOut || maxedOut ? "disabled" : ""}>${btnLabel}</button>
         </div>
       </div>
     `;
@@ -812,6 +914,107 @@
     const maxedOut = !soldOut && inCart >= product.stock;
     btn.disabled = soldOut || maxedOut;
     btn.textContent = soldOut ? "Sold Out" : (maxedOut ? "Max in Cart" : "Add to Cart");
+  }
+
+  /* ================================================================
+     PRODUCT QUICK VIEW — small modal opened by clicking a card.
+     Multiple photos: the Stock sheet's "Image URL" cell can hold more
+     than one URL separated by commas; fetchStock() below turns that
+     into product.images. If there's only one (or none set), it falls
+     back to product.image so this works with no sheet changes at all.
+     ================================================================ */
+  let quickViewId = null;
+  let quickViewImageIndex = 0;
+
+  function qvImages(product) {
+    return (product.images && product.images.length) ? product.images : [product.image];
+  }
+
+  function openQuickView(id) {
+    quickViewId = id;
+    quickViewImageIndex = 0;
+    renderQuickView();
+    document.getElementById("quickviewOverlay").classList.add("open");
+    document.getElementById("quickviewModal").classList.add("open");
+  }
+
+  function closeQuickView() {
+    document.getElementById("quickviewOverlay").classList.remove("open");
+    document.getElementById("quickviewModal").classList.remove("open");
+  }
+
+  function qvPrevImage() {
+    const product = PRODUCTS.find(p => p.id === quickViewId);
+    if (!product) return;
+    const images = qvImages(product);
+    quickViewImageIndex = (quickViewImageIndex - 1 + images.length) % images.length;
+    renderQuickView();
+  }
+
+  function qvNextImage() {
+    const product = PRODUCTS.find(p => p.id === quickViewId);
+    if (!product) return;
+    const images = qvImages(product);
+    quickViewImageIndex = (quickViewImageIndex + 1) % images.length;
+    renderQuickView();
+  }
+
+  function qvGoToImage(i) {
+    quickViewImageIndex = i;
+    renderQuickView();
+  }
+
+  function renderQuickView() {
+    const product = PRODUCTS.find(p => p.id === quickViewId);
+    const modal = document.getElementById("quickviewModal");
+    if (!product || !modal) return;
+
+    const images = qvImages(product);
+    const inCart = cart[product.id] || 0;
+    const soldOut = product.stock <= 0;
+    const maxedOut = !soldOut && inCart >= product.stock;
+    const btnLabel = soldOut ? "Sold Out" : (maxedOut ? "Max in Cart" : "Add to Cart");
+
+    modal.innerHTML = `
+      <button class="qv-close" onclick="closeQuickView()">&times;</button>
+      <div class="qv-gallery">
+        <img class="qv-photo" src="${images[quickViewImageIndex]}" alt="${product.brand} ${product.name}">
+        ${images.length > 1 ? `
+          <button class="qv-nav qv-prev" onclick="qvPrevImage()">&#8249;</button>
+          <button class="qv-nav qv-next" onclick="qvNextImage()">&#8250;</button>
+          <div class="qv-dots">
+            ${images.map((img, i) => `<button class="qv-dot ${i === quickViewImageIndex ? "active" : ""}" onclick="qvGoToImage(${i})"></button>`).join("")}
+          </div>
+        ` : ""}
+      </div>
+      <div class="qv-info">
+        <div class="qv-brand">${product.brand}</div>
+        <div class="qv-name">${product.name}</div>
+        <div class="qv-meta">
+          <span class="qv-size">Size ${product.size}</span>
+          <span class="qv-price">$${product.price}</span>
+        </div>
+        ${product.description ? `<p class="qv-description">${product.description}</p>` : ""}
+        <button class="qv-add-btn" id="qvAddBtn" onclick="quickViewAddToCart()" ${soldOut || maxedOut ? "disabled" : ""}>${btnLabel}</button>
+      </div>
+    `;
+  }
+
+  function quickViewAddToCart() {
+    addToCart(quickViewId);
+    const btn = document.getElementById("qvAddBtn");
+    const product = PRODUCTS.find(p => p.id === quickViewId);
+    if (!btn || !product) return;
+    btn.textContent = "Added ✓";
+    btn.classList.add("added");
+    setTimeout(() => {
+      btn.classList.remove("added");
+      const inCart = cart[product.id] || 0;
+      const soldOut = product.stock <= 0;
+      const maxedOut = !soldOut && inCart >= product.stock;
+      btn.disabled = soldOut || maxedOut;
+      btn.textContent = soldOut ? "Sold Out" : (maxedOut ? "Max in Cart" : "Add to Cart");
+    }, 900);
   }
 
   function getCartEntries() {
