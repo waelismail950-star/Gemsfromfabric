@@ -1670,7 +1670,6 @@
 
     if (result.status === "rejected") {
       const soldOutNames = (result.items || []).map(i => i.name || i.id).join(", ");
-      clearTimeout(window._orderSuccessTimer);
       document.getElementById("cartDrawer").classList.remove("success");
       cart = cartSnapshot;
       document.getElementById("buyerPhone").value = phoneSnapshot;
@@ -1724,20 +1723,15 @@
 
     const drawer = document.getElementById("cartDrawer");
     drawer.classList.add("success");
-
-    // Give a Whish customer time to actually read and act on the payment
-    // instructions instead of auto-closing on them mid-read; COD keeps
-    // the quick auto-dismiss since there's nothing further to do. Either
-    // way, the "Done" button lets them skip this wait entirely.
-    clearTimeout(window._orderSuccessTimer);
-    window._orderSuccessTimer = setTimeout(finishOrderSuccess, isWhish ? 15000 : 4000);
+    // No auto-dismiss — this screen stays up until the customer clicks
+    // "Done" (finishOrderSuccess()), so a Whish customer in particular
+    // never gets closed out mid-read of the payment instructions.
   }
 
-  // Shared by the auto-dismiss timer above and the "Done" button — both
-  // just mean "I'm finished looking at this, close the cart."
+  // Called by the "Done" button — closes the success screen and
+  // refreshes the grid to reflect newly-sold stock.
   function finishOrderSuccess() {
-    clearTimeout(window._orderSuccessTimer);
-    renderProducts(); // refresh grid to show newly-sold items
+    renderProducts();
     closeCart();
   }
 
