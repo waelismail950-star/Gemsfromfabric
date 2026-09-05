@@ -22,6 +22,19 @@
      logo (CONFIG.LOGO_SRC), instead of duplicating that large data URI
      into the head as well. -->
 
+<!-- Google Analytics (GA4) — property: gemsfromfabric.shop.
+     Automatic page-view tracking, plus custom funnel events fired from
+     the app code below (view_item, add_to_cart, begin_checkout,
+     purchase) so Explore > Funnel Exploration in GA4 can show exactly
+     where visitors drop off, not just raw traffic counts. -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-79DJBRCWEX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'G-79DJBRCWEX');
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -243,8 +256,9 @@
   .product-info { padding: 18px 16px 20px; }
   .product-brand { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cream-soft); margin-bottom: 4px; }
   .product-name { font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 500; margin-bottom: 10px; color: var(--cream); }
-  .product-meta { display: flex; justify-content: space-between; align-items: center; font-family: 'Space Mono', monospace; font-size: 0.8rem; margin-bottom: 14px; }
+  .product-meta { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 10px; font-family: 'Space Mono', monospace; font-size: 0.8rem; margin-bottom: 14px; }
   .product-size { color: var(--cream-soft); border: 1px solid var(--wood-light); padding: 2px 8px; border-radius: var(--radius); }
+  .product-condition { color: var(--amber); border: 1px solid var(--amber); padding: 2px 8px; border-radius: var(--radius); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; }
   .low-stock { color: var(--rust); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; }
 
   .add-btn {
@@ -349,6 +363,12 @@
   }
   .order-success h3 { font-size: 1.5rem; margin-bottom: 10px; color: var(--cream); }
   .order-success p { color: var(--cream-soft); font-size: 0.95rem; max-width: 280px; }
+  .order-id-display {
+    margin-top: 14px; font-family: 'Space Mono', monospace; font-size: 0.9rem;
+    color: var(--cream); background: var(--wood-dark); border: 1px dashed var(--brass);
+    padding: 8px 16px; border-radius: var(--radius);
+  }
+  .order-track-hint { font-size: 0.78rem; margin-top: 6px; opacity: 0.8; }
   .whish-instructions {
     margin-top: 18px; padding: 14px 16px; background: var(--wood-dark); border: 1px solid var(--amber);
     border-radius: var(--radius); max-width: 280px;
@@ -463,7 +483,8 @@
   .order-id { font-family: 'Space Mono', monospace; font-size: 0.85rem; color: var(--amber); }
   .order-status { font-size: 0.75rem; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; }
   .order-status.pending { background: var(--amber); color: var(--wood-dark); }
-  .order-status.approved { background: #4a7c4e; color: var(--cream); }
+  .order-status.accepted { background: #4a7c4e; color: var(--cream); }
+  .order-status.picked_up { background: var(--wood-light); color: var(--amber); border: 1px solid var(--amber); }
   .order-status.rejected { background: var(--rust); color: var(--cream); }
   .order-details { font-size: 0.9rem; color: var(--cream-soft); margin-bottom: 8px; }
   .order-details-row { margin: 4px 0; }
@@ -526,6 +547,25 @@
   .qv-size { font-family: 'Space Mono', monospace; font-size: 0.8rem; color: var(--cream-soft); }
   .qv-price { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--amber); font-size: 1.05rem; }
   .qv-description { color: var(--cream-soft); font-size: 0.92rem; line-height: 1.55; margin: 10px 0 18px; white-space: pre-wrap; }
+  .qv-detail-row { font-size: 0.85rem; color: var(--cream-soft); margin-bottom: 6px; }
+  .qv-detail-label { font-family: 'Space Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--amber); margin-right: 8px; }
+
+  /* ============================================================
+     TRACK YOUR ORDER — reuses the .quickview-overlay/.quickview-modal
+     shell (same look, same open/close mechanics), own content.
+     ============================================================ */
+  .track-intro { color: var(--cream-soft); font-size: 0.85rem; margin: 6px 0 16px; line-height: 1.5; }
+  .track-result { margin-top: 4px; }
+  .track-message { font-size: 0.85rem; margin-top: 14px; line-height: 1.5; }
+  .track-message.error { color: var(--rust); }
+  .track-message.muted { color: var(--cream-soft); }
+  .track-timeline { display: flex; flex-direction: column; gap: 16px; margin: 18px 0 6px; }
+  .track-step { display: flex; align-items: center; gap: 12px; font-family: 'Space Mono', monospace; font-size: 0.85rem; color: var(--cream-soft); }
+  .track-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--wood-dark); border: 2px solid var(--wood-light); flex-shrink: 0; }
+  .track-step.done { color: var(--cream); }
+  .track-step.done .track-dot { background: var(--amber); border-color: var(--amber); }
+  .track-step.current .track-dot { box-shadow: 0 0 0 4px rgba(224,164,88,0.25); }
+  .track-order-summary { font-size: 0.82rem; color: var(--cream-soft); margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--wood-light); }
   .qv-add-btn {
     width: 100%; padding: 13px; border-radius: var(--radius); border: none;
     background: var(--amber); color: var(--wood-dark); font-family: 'Space Mono', monospace;
@@ -548,6 +588,7 @@
     <nav class="nav-links">
       <a href="#shop" class="nav-label">Shop</a>
       <a href="#contact" class="nav-label">Contact</a>
+      <a href="javascript:void(0)" class="nav-label" onclick="openTrackOrder()">Track Order</a>
       <button class="cart-btn" onclick="openCart()">
         <span class="mono">Cart</span>
         <span class="cart-count" id="cartCount">0</span>
@@ -658,7 +699,7 @@
     </div>
     <div class="footer-bottom">
       <span>© 2026 GemsFromFabric. Every piece is one of one.</span>
-      <span>Shipping worldwide, packed with care.</span>
+      <span>Shipping across Lebanon, packed with care.</span>
     </div>
   </footer>
 
@@ -682,6 +723,8 @@
       <div class="order-success-icon">✓</div>
       <h3>Thank you for your order!</h3>
       <p>We'll contact you soon to confirm the details and shipping.</p>
+      <p class="order-id-display">Order ID: <strong id="successOrderId"></strong></p>
+      <p class="order-track-hint">Save this — use "Track Order" up top anytime to check its status.</p>
       <div class="whish-instructions" id="whishInstructions" hidden>
         <p class="whish-instructions-title">Complete your payment via Whish</p>
         <p>Send <strong id="whishAmount">$0</strong> to <strong id="whishNumberDisplay"></strong> on Whish, then we'll confirm and ship your order.</p>
@@ -741,6 +784,28 @@
   <div class="quickview-overlay" id="quickviewOverlay" onclick="closeQuickView()"></div>
   <div class="quickview-modal" id="quickviewModal"></div>
 
+  <!-- TRACK ORDER: reuses the same overlay/modal shell as quick-view.
+       Customer enters their Order ID + the phone they checked out with;
+       the server matches those before returning any status. -->
+  <div class="quickview-overlay" id="trackOverlay" onclick="closeTrackOrder()"></div>
+  <div class="quickview-modal" id="trackModal">
+    <div class="qv-info">
+      <button class="qv-close" onclick="closeTrackOrder()">&times;</button>
+      <div class="qv-brand">Track Your Order</div>
+      <p class="track-intro">Enter your Order ID (from your confirmation) and the phone number you checked out with.</p>
+      <div class="field-group">
+        <label class="field-label" for="trackOrderId">Order ID</label>
+        <input type="text" class="contact-field" id="trackOrderId" placeholder="ORD-1234567890">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="trackOrderPhone">Phone number</label>
+        <input type="tel" class="contact-field" id="trackOrderPhone" placeholder="e.g. 81 056 617">
+      </div>
+      <button class="qv-add-btn" id="trackSubmitBtn" onclick="submitTrackOrder()">Check Status</button>
+      <div class="track-result" id="trackResult"></div>
+    </div>
+  </div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -752,6 +817,18 @@
      This is the ONLY section you should need to touch. Everything
      else on the page (header, footer, cart) pulls from here.
      ================================================================ */
+  // Shown whenever a product has no photo, or its photo URL fails to
+  // load (bad/expired Imgur link) — used both as the default in
+  // mapProducts_() and as the onerror fallback on every product <img>.
+  const PLACEHOLDER_IMAGE = "https://placehold.co/600x750/2b1b11/f0e4cd?text=No+Photo+Yet";
+
+  // Thin wrapper around gtag so every call site doesn't need its own
+  // "is GA4 even loaded" guard (ad blockers and offline visits both
+  // leave window.gtag undefined — the shop still has to work either way).
+  function trackEvent(name, params) {
+    if (typeof gtag === "function") gtag("event", name, params);
+  }
+
   const CONFIG = {
     SHOP_NAME:  "GemsFromFabric",
     SHOP_EMAIL: "Gemsfromfabric@gmail.com",
@@ -834,9 +911,11 @@
       size: p.size || "",
       price: Number(p.price) || 0,
       stock: Number(p.stock) || 0,
-      images: Array.isArray(p.images) && p.images.length ? p.images : ["https://placehold.co/600x750/2b1b11/f0e4cd?text=No+Photo+Yet"],
-      image: (Array.isArray(p.images) && p.images[0]) || "https://placehold.co/600x750/2b1b11/f0e4cd?text=No+Photo+Yet",
-      description: p.description || ""
+      images: Array.isArray(p.images) && p.images.length ? p.images : [PLACEHOLDER_IMAGE],
+      image: (Array.isArray(p.images) && p.images[0]) || PLACEHOLDER_IMAGE,
+      description: p.description || "",
+      measurements: p.measurements || "",
+      condition: p.condition || ""
     }));
   }
 
@@ -976,12 +1055,13 @@
       <div class="product-card ${soldOut ? "sold-out" : ""}" onclick="openQuickView(${p.id})">
         ${soldOut ? '<div class="sold-out-badge">Sold Out</div>' : ""}
         <div class="price-tag">$${p.price}</div>
-        <img class="product-photo" src="${p.image}" alt="${p.brand} ${p.name}">
+        <img class="product-photo" src="${p.image}" alt="${p.brand} ${p.name}" loading="lazy" decoding="async" onerror="this.onerror=null; this.src=PLACEHOLDER_IMAGE;">
         <div class="product-info">
           <div class="product-brand">${p.brand}</div>
           <div class="product-name">${p.name}</div>
           <div class="product-meta">
             <span class="product-size">Size ${p.size}</span>
+            ${p.condition ? `<span class="product-condition">${escapeHtml(p.condition)}</span>` : ""}
             ${!soldOut && p.stock <= 2 ? `<span class="low-stock">Only ${p.stock} left</span>` : ""}
           </div>
           <button class="add-btn" id="add-${p.id}" onclick="event.stopPropagation(); addToCart(${p.id})" ${soldOut || maxedOut ? "disabled" : ""}>${btnLabel}</button>
@@ -1061,6 +1141,12 @@
     cart[id] = inCart + 1;
     updateCartUI();
 
+    trackEvent("add_to_cart", {
+      currency: "USD",
+      value: product.price,
+      items: [{ item_id: product.id, item_name: product.name, item_brand: product.brand, price: product.price, quantity: 1 }]
+    });
+
     const btn = document.getElementById(`add-${id}`);
     if (btn) {
       btn.textContent = "Added ✓";
@@ -1122,11 +1208,94 @@
     renderQuickView();
     document.getElementById("quickviewOverlay").classList.add("open");
     document.getElementById("quickviewModal").classList.add("open");
+
+    const product = PRODUCTS.find(p => p.id === id);
+    if (product) {
+      trackEvent("view_item", {
+        currency: "USD",
+        value: product.price,
+        items: [{ item_id: product.id, item_name: product.name, item_brand: product.brand, price: product.price }]
+      });
+    }
   }
 
   function closeQuickView() {
     document.getElementById("quickviewOverlay").classList.remove("open");
     document.getElementById("quickviewModal").classList.remove("open");
+  }
+
+  /* ================================================================
+     TRACK ORDER — public order-status lookup. The server (trackOrder
+     action) only returns a status when the given phone number matches
+     the order's phone, so an Order ID alone isn't enough to look up
+     someone else's order.
+     ================================================================ */
+  function openTrackOrder() {
+    document.getElementById("trackOverlay").classList.add("open");
+    document.getElementById("trackModal").classList.add("open");
+  }
+
+  function closeTrackOrder() {
+    document.getElementById("trackOverlay").classList.remove("open");
+    document.getElementById("trackModal").classList.remove("open");
+  }
+
+  async function submitTrackOrder() {
+    const orderId = document.getElementById("trackOrderId").value.trim();
+    const phone = document.getElementById("trackOrderPhone").value.trim();
+    const resultEl = document.getElementById("trackResult");
+
+    if (!orderId || !phone) {
+      resultEl.innerHTML = `<p class="track-message error">Enter both your Order ID and phone number.</p>`;
+      return;
+    }
+
+    resultEl.innerHTML = `<p class="track-message muted">Checking...</p>`;
+
+    try {
+      const url = `${CONFIG.ORDER_ENDPOINT}?action=trackOrder&orderId=${encodeURIComponent(orderId)}&phone=${encodeURIComponent(phone)}&_=${Date.now()}`;
+      const res = await fetch(url, { cache: "no-store" });
+      const data = await res.json();
+      if (!data || data.error || !data.order) {
+        resultEl.innerHTML = `<p class="track-message error">No matching order found — double-check your Order ID and phone number.</p>`;
+        return;
+      }
+      renderTrackResult(data.order);
+    } catch (e) {
+      resultEl.innerHTML = `<p class="track-message error">Couldn't reach the server — try again in a moment.</p>`;
+    }
+  }
+
+  function renderTrackResult(order) {
+    const resultEl = document.getElementById("trackResult");
+
+    if (order.status === "rejected") {
+      resultEl.innerHTML = `<p class="track-message error">This order was cancelled — message us on WhatsApp if you have questions.</p>`;
+      return;
+    }
+
+    const steps = [
+      { key: "pending", label: "Placed" },
+      { key: "accepted", label: "Accepted" },
+      { key: "picked_up", label: "Picked Up" }
+    ];
+    const order_ = steps.map(s => s.key);
+    const currentIdx = Math.max(0, order_.indexOf(order.status));
+
+    const itemsSummary = (order.items || []).map(i => `${i.qty}x ${i.name}`).join(", ");
+
+    resultEl.innerHTML = `
+      <div class="track-timeline">
+        ${steps.map((s, i) => `
+          <div class="track-step ${i <= currentIdx ? "done" : ""} ${i === currentIdx ? "current" : ""}">
+            <span class="track-dot"></span><span>${s.label}</span>
+          </div>
+        `).join("")}
+      </div>
+      <div class="track-order-summary">
+        ${itemsSummary ? escapeHtml(itemsSummary) + " — " : ""}$${order.total}
+      </div>
+    `;
   }
 
   function qvPrevImage() {
@@ -1164,7 +1333,7 @@
     modal.innerHTML = `
       <button class="qv-close" onclick="closeQuickView()">&times;</button>
       <div class="qv-gallery">
-        <img class="qv-photo" src="${images[quickViewImageIndex]}" alt="${product.brand} ${product.name}">
+        <img class="qv-photo" src="${images[quickViewImageIndex]}" alt="${product.brand} ${product.name}" onerror="this.onerror=null; this.src=PLACEHOLDER_IMAGE;">
         ${images.length > 1 ? `
           <button class="qv-nav qv-prev" onclick="qvPrevImage()">&#8249;</button>
           <button class="qv-nav qv-next" onclick="qvNextImage()">&#8250;</button>
@@ -1180,6 +1349,8 @@
           <span class="qv-size">Size ${product.size}</span>
           <span class="qv-price">$${product.price}</span>
         </div>
+        ${product.condition ? `<div class="qv-detail-row"><span class="qv-detail-label">Condition</span> ${escapeHtml(product.condition)}</div>` : ""}
+        ${product.measurements ? `<div class="qv-detail-row"><span class="qv-detail-label">Measurements</span> ${escapeHtml(product.measurements)}</div>` : ""}
         ${product.description ? `<p class="qv-description">${product.description}</p>` : ""}
         <button class="qv-add-btn" id="qvAddBtn" onclick="quickViewAddToCart()" ${soldOut || maxedOut ? "disabled" : ""}>${btnLabel}</button>
       </div>
@@ -1239,7 +1410,7 @@
     } else {
       itemsEl.innerHTML = entries.map(({ product, qty }) => `
         <div class="cart-item">
-          <img src="${product.image}" alt="${product.name}">
+          <img src="${product.image}" alt="${product.name}" loading="lazy" decoding="async" onerror="this.onerror=null; this.src=PLACEHOLDER_IMAGE;">
           <div class="cart-item-info">
             <div class="cart-item-name">${product.brand} — ${product.name}</div>
             <div class="cart-item-meta">Size ${product.size}</div>
@@ -1286,6 +1457,16 @@
   function openCart() {
     document.getElementById("cartOverlay").classList.add("open");
     document.getElementById("cartDrawer").classList.add("open");
+
+    const entries = getCartEntries();
+    if (entries.length > 0) {
+      const { subtotal } = getOrderTotals(entries);
+      trackEvent("begin_checkout", {
+        currency: "USD",
+        value: subtotal,
+        items: entries.map(({ product, qty }) => ({ item_id: product.id, item_name: product.name, item_brand: product.brand, price: product.price, quantity: qty }))
+      });
+    }
   }
   function closeCart() {
     cancelOrderConfirmation(); // safe no-op if there's nothing pending
@@ -1470,12 +1651,23 @@
       product.stock = Math.max(0, product.stock - qty);
     });
 
-    showOrderSuccess(paymentMethod, total);
+    trackEvent("purchase", {
+      transaction_id: orderId,
+      currency: "USD",
+      value: total,
+      shipping: delivery,
+      payment_type: paymentMethod,
+      items: entries.map(({ product, qty }) => ({ item_id: product.id, item_name: product.name, item_brand: product.brand, price: product.price, quantity: qty }))
+    });
+
+    showOrderSuccess(paymentMethod, total, orderId);
   }
 
-  function showOrderSuccess(paymentMethod, total) {
+  function showOrderSuccess(paymentMethod, total, orderId) {
     cart = {};
     updateCartUI();
+
+    document.getElementById("successOrderId").textContent = orderId;
 
     document.getElementById("buyerPhone").value = "";
     document.getElementById("buyerName").value = "";
@@ -1671,13 +1863,14 @@
 
     body.innerHTML = orders.map(order => {
       const itemsHtml = (order.items || []).map(item => `${item.qty}x ${item.name}`).join(", ");
-      const canApproveReject = order.status === "pending";
+      const isPending = order.status === "pending";
+      const isAccepted = order.status === "accepted";
 
       return `
         <div class="order-item">
           <div class="order-header">
             <span class="order-id">${order.id}</span>
-            <span class="order-status ${order.status}">${order.status}</span>
+            <span class="order-status ${order.status}">${order.status.replace("_", " ")}</span>
           </div>
           <div class="order-details">
             <div class="order-details-row"><strong>Items:</strong> ${itemsHtml}</div>
@@ -1688,10 +1881,15 @@
             ${order.note ? `<div class="order-details-row"><strong>Note:</strong> ${order.note}</div>` : ""}
             <div class="order-details-row"><strong>Time:</strong> ${new Date(order.timestamp).toLocaleString()}</div>
           </div>
-          ${canApproveReject ? `
+          ${isPending ? `
             <div class="order-buttons">
               <button class="order-approve" onclick="setOrderStatus('${order.id}', 'accepted')">✓ Approve</button>
               <button class="order-reject" onclick="setOrderStatus('${order.id}', 'rejected')">✕ Reject</button>
+            </div>
+          ` : ""}
+          ${isAccepted ? `
+            <div class="order-buttons">
+              <button class="order-approve" onclick="setOrderStatus('${order.id}', 'picked_up')">📦 Mark Picked Up</button>
             </div>
           ` : ""}
         </div>
