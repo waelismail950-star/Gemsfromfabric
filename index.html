@@ -363,12 +363,26 @@
   }
   .order-success h3 { font-size: 1.5rem; margin-bottom: 10px; color: var(--cream); }
   .order-success p { color: var(--cream-soft); font-size: 0.95rem; max-width: 280px; }
+  .order-id-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
   .order-id-display {
-    margin-top: 14px; font-family: 'Space Mono', monospace; font-size: 0.9rem;
+    font-family: 'Space Mono', monospace; font-size: 0.9rem;
     color: var(--cream); background: var(--wood-dark); border: 1px dashed var(--brass);
-    padding: 8px 16px; border-radius: var(--radius);
+    padding: 8px 16px; border-radius: var(--radius); margin: 0;
   }
+  .copy-order-id-btn {
+    font-family: 'Space Mono', monospace; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 8px 14px; border-radius: var(--radius); border: 1px solid var(--brass);
+    background: transparent; color: var(--cream-soft); cursor: pointer; transition: all 0.15s ease; white-space: nowrap;
+  }
+  .copy-order-id-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .copy-order-id-btn.copied { background: var(--amber); border-color: var(--amber); color: var(--wood-dark); }
   .order-track-hint { font-size: 0.78rem; margin-top: 6px; opacity: 0.8; }
+  .order-done-btn {
+    margin-top: 22px; width: 100%; max-width: 260px; padding: 12px; border-radius: var(--radius); border: none;
+    background: var(--amber); color: var(--wood-dark); font-family: 'Space Mono', monospace; font-size: 0.85rem;
+    text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; transition: transform 0.15s ease;
+  }
+  .order-done-btn:hover { transform: translateY(-1px); }
   .whish-instructions {
     margin-top: 18px; padding: 14px 16px; background: var(--wood-dark); border: 1px solid var(--amber);
     border-radius: var(--radius); max-width: 280px;
@@ -723,12 +737,16 @@
       <div class="order-success-icon">✓</div>
       <h3>Thank you for your order!</h3>
       <p>We'll contact you soon to confirm the details and shipping.</p>
-      <p class="order-id-display">Order ID: <strong id="successOrderId"></strong></p>
+      <div class="order-id-row">
+        <p class="order-id-display">Order ID: <strong id="successOrderId"></strong></p>
+        <button class="copy-order-id-btn" id="copyOrderIdBtn" onclick="copyOrderId()" type="button">Copy</button>
+      </div>
       <p class="order-track-hint">Save this — use "Track Order" up top anytime to check its status.</p>
       <div class="whish-instructions" id="whishInstructions" hidden>
         <p class="whish-instructions-title">Complete your payment via Whish</p>
         <p>Send <strong id="whishAmount">$0</strong> to <strong id="whishNumberDisplay"></strong> on Whish, then we'll confirm and ship your order.</p>
       </div>
+      <button class="order-done-btn" onclick="finishOrderSuccess()" type="button">Done</button>
     </div>
     <div class="cart-footer">
       <div class="cart-total-row minor-row">
@@ -1599,6 +1617,11 @@
 
     const orderId = generateOrderId();
     const items = entries.map(({ product, qty }) => ({ id: product.id, qty, name: product.name, price: product.price }));
+    // Snapshot the cart/fields so we can restore them if the server
+    // ends up rejecting the order (see the rejected branch below) —
+    // the success screen shows immediately, before we know that yet.
+    const cartSnapshot = { ...cart };
+    const phoneSnapshot = phone, nameSnapshot = name, noteSnapshot = note;
 
     let body = `New order from ${CONFIG.SHOP_NAME}'s website:\n`;
     body += `ORDER ID: ${orderId}\n`;
@@ -1628,6 +1651,15 @@
     payload.append("note", note);
     payload.append("paymentMethod", paymentMethod);
 
+    // Show the order-id screen right now instead of leaving the customer
+    // staring at a frozen countdown while the request is in flight (a
+    // real Apps Script call can take a couple of seconds) — the request
+    // below still runs for real. On the rare rejection (stock changed in
+    // the last second) we roll the screen back and restore the cart/
+    // fields from the snapshot above so "update your cart and try again"
+    // is still true when it happens.
+    showOrderSuccess(paymentMethod, total, orderId);
+
     let result = { status: "ok" }; // optimistic default if we can't read the response at all
     try {
       const res = await fetch(CONFIG.ORDER_ENDPOINT, { method: "POST", body: payload });
@@ -1638,6 +1670,13 @@
 
     if (result.status === "rejected") {
       const soldOutNames = (result.items || []).map(i => i.name || i.id).join(", ");
+      clearTimeout(window._orderSuccessTimer);
+      document.getElementById("cartDrawer").classList.remove("success");
+      cart = cartSnapshot;
+      document.getElementById("buyerPhone").value = phoneSnapshot;
+      document.getElementById("buyerName").value = nameSnapshot;
+      document.getElementById("buyerNote").value = noteSnapshot;
+      updateCartUI();
       alert(`Sorry — ${soldOutNames || "an item in your cart"} sold out before your order went through. Please update your cart and try again.`);
       await fetchProducts();
       renderProducts();
@@ -1659,8 +1698,6 @@
       payment_type: paymentMethod,
       items: entries.map(({ product, qty }) => ({ item_id: product.id, item_name: product.name, item_brand: product.brand, price: product.price, quantity: qty }))
     });
-
-    showOrderSuccess(paymentMethod, total, orderId);
   }
 
   function showOrderSuccess(paymentMethod, total, orderId) {
@@ -1690,12 +1727,51 @@
 
     // Give a Whish customer time to actually read and act on the payment
     // instructions instead of auto-closing on them mid-read; COD keeps
-    // the quick auto-dismiss since there's nothing further to do.
+    // the quick auto-dismiss since there's nothing further to do. Either
+    // way, the "Done" button lets them skip this wait entirely.
     clearTimeout(window._orderSuccessTimer);
-    window._orderSuccessTimer = setTimeout(() => {
-      renderProducts(); // refresh grid to show newly-sold items
-      closeCart();
-    }, isWhish ? 15000 : 4000);
+    window._orderSuccessTimer = setTimeout(finishOrderSuccess, isWhish ? 15000 : 4000);
+  }
+
+  // Shared by the auto-dismiss timer above and the "Done" button — both
+  // just mean "I'm finished looking at this, close the cart."
+  function finishOrderSuccess() {
+    clearTimeout(window._orderSuccessTimer);
+    renderProducts(); // refresh grid to show newly-sold items
+    closeCart();
+  }
+
+  function copyOrderId() {
+    const orderId = document.getElementById("successOrderId").textContent;
+    const btn = document.getElementById("copyOrderIdBtn");
+    const showCopied = () => {
+      btn.textContent = "Copied ✓";
+      btn.classList.add("copied");
+      setTimeout(() => {
+        btn.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 1500);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(orderId).then(showCopied).catch(() => fallbackCopy(orderId, showCopied));
+    } else {
+      fallbackCopy(orderId, showCopied);
+    }
+  }
+
+  // Fallback for browsers/contexts where the Clipboard API is unavailable
+  // (older browsers, some in-app webviews) — a temporary offscreen
+  // textarea + the legacy execCommand copy.
+  function fallbackCopy(text, onDone) {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try { document.execCommand("copy"); onDone(); } catch (e) { /* nothing more we can do */ }
+    document.body.removeChild(textarea);
   }
 
   function initHeroScene() {
